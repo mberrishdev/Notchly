@@ -66,6 +66,9 @@ edge without a special case.
 
 - Transparent, shaped, always-on-top panel at `NSStatusWindowLevel`
 - Four-edge docking, drag-to-reposition, snug-when-idle window sizing
+- Hover-to-open decided in Rust: a non-activating panel in an accessory app does not
+  reliably deliver `mouseenter`/`mouseleave` to its web content, and the window
+  resizes underneath the pointer as it opens
 - Idle handle chips: clock, date, CPU, memory, battery, now playing, clipboard,
   widget icons
 - Built-in widgets: clock, system, now playing, clipboard, quick launcher
@@ -89,8 +92,9 @@ better than the macOS AppleScript path it replaces.
 
 **No real vibrancy.** The Swift build used `ultraThinMaterial`. A shaped transparent
 window can't sit on an `NSVisualEffectView` without the blur showing as a rectangle
-behind the concave corners, so "glass" is a translucent fill. This is a genuine
-fidelity regression.
+behind the concave corners, so "glass" is a translucent fill and the default material
+is Solid. Below about 90% opacity a fill with no blur behind it reads as a rendering
+fault rather than as depth, which is why the materials sit close to opaque.
 
 **Launcher has no app icons.** Extracting `.icns` and `.lnk` icons cross-platform is
 real work; tiles show the app's initial instead.

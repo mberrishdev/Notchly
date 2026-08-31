@@ -1,6 +1,7 @@
 mod bridge;
 mod builtins;
 mod geometry;
+mod hover;
 mod panel;
 mod platform;
 mod services;
@@ -33,6 +34,8 @@ fn open_panel(app: AppHandle) {
 
 #[tauri::command]
 fn close_panel(app: AppHandle) {
+    // Closing on purpose must not re-open the moment the watchdog sees the pointer.
+    panel::suppress_hover(&app, 500);
     panel::close(&app)
 }
 
@@ -355,6 +358,8 @@ pub fn run() {
             start_widget_watcher(&handle);
             let clipboard = crate::services::clipboard::Watcher::spawn(handle.clone());
             std::mem::forget(clipboard);
+            let hover = hover::Watchdog::spawn(handle.clone());
+            std::mem::forget(hover);
 
             tray::build(&handle)?;
             register_hotkey(&handle, &hotkey);

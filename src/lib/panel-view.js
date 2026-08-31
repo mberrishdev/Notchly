@@ -8,7 +8,10 @@ import { notchPath, growsHorizontally } from "./notch-shape.js";
 // animation and shrinks it after the close one, so this only ever animates inside a
 // window that is already big enough.
 
-const MATERIAL_OPACITY = { glass: 0.84, tinted: 0.93, solid: 0.99 };
+// A shaped window can't sit on a real blur (see docs/PORTING.md), so "glass" is a
+// translucent fill. Kept close to opaque: the notch this imitates is solid, and at
+// lower values it reads as a rendering fault rather than as depth.
+const MATERIAL_OPACITY = { glass: 0.92, tinted: 0.97, solid: 1 };
 const OPEN_MS = 300;
 const CLOSE_MS = 260;
 

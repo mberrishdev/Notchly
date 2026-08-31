@@ -17,19 +17,8 @@ let stackSignature = "";
 let launcherResults = [];
 let launcherSelection = 0;
 
-let openTimer = null;
-let closeTimer = null;
 let dragging = false;
 let dragStart = null;
-/// Guards against re-opening under a pointer that never left after an explicit close.
-let hoverSuppressedUntil = 0;
-
-const clearTimers = () => {
-  clearTimeout(openTimer);
-  clearTimeout(closeTimer);
-  openTimer = null;
-  closeTimer = null;
-};
 
 function render() {
   if (!current) return;
@@ -120,23 +109,15 @@ function buildCard(slot, settings) {
   return node;
 }
 
-// Pointer handling. The window is exactly the panel plus its margin, so entering and
-// leaving the document is entering and leaving the panel.
+// Opening and closing on hover is decided in Rust, which owns the window frame and
+// can see the pointer even while the window resizes underneath it. These only carry
+// the visual hover state.
 function pointerEntered() {
-  clearTimers();
   document.body.dataset.hover = "true";
-  if (!current || current.metrics.expanded) return;
-  if (Date.now() < hoverSuppressedUntil) return;
-  if (current.settings.activation !== "hover") return;
-  openTimer = setTimeout(() => panel.open(), current.settings.openDelay * 1000);
 }
 
 function pointerLeft() {
-  clearTimers();
   document.body.dataset.hover = "false";
-  if (!current || !current.metrics.expanded) return;
-  if (current.settings.isPinned) return;
-  closeTimer = setTimeout(() => panel.close(), current.settings.closeDelay * 1000);
 }
 
 // Drag the handle to slide the panel along its edge, or across the midpoint of the
@@ -156,7 +137,6 @@ function onMouseMove(event) {
   if (!dragStart.moved && distance > 4) {
     dragStart.moved = true;
     dragging = true;
-    clearTimers();
     panel.beginDrag();
   }
   if (dragging) panel.drag();
@@ -168,7 +148,6 @@ function onMouseUp() {
   dragStart = null;
   if (wasDrag) {
     dragging = false;
-    hoverSuppressedUntil = Date.now() + 300;
     panel.endDrag();
     return;
   }
@@ -253,10 +232,7 @@ function wire() {
     }
   });
 
-  document.getElementById("close-button").addEventListener("click", () => {
-    hoverSuppressedUntil = Date.now() + 450;
-    panel.close();
-  });
+  document.getElementById("close-button").addEventListener("click", () => panel.close());
 
   document.getElementById("settings-button").addEventListener("click", () => {
     invoke("open_settings");

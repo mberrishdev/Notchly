@@ -46,6 +46,9 @@ pub struct PanelState {
     pub widget_logs: std::collections::BTreeMap<String, Vec<String>>,
     /// Bumped per widget to force its iframe to reload after a file change.
     pub revisions: std::collections::HashMap<String, u64>,
+    /// Stops the panel re-opening under a pointer that never left after a deliberate
+    /// close — the close button, Escape, or the hotkey.
+    pub hover_suppressed_until: Option<std::time::Instant>,
     /// Installed applications, indexed once in the background at launch.
     pub apps: Vec<crate::services::apps::App>,
 }
@@ -66,6 +69,7 @@ impl PanelState {
             widget_logs: Default::default(),
             revisions: Default::default(),
             apps: Vec::new(),
+            hover_suppressed_until: None,
         }
     }
 }
@@ -281,6 +285,7 @@ pub fn close(app: &AppHandle) {
 }
 
 pub fn toggle(app: &AppHandle) {
+    suppress_hover(app, 500);
     let expanded = {
         let state = app.state::<SharedPanel>();
         let guard = state.lock().unwrap();
@@ -374,4 +379,20 @@ pub fn bump_revision(app: &AppHandle, widget_id: &str) {
         *state.revisions.entry(widget_id.to_string()).or_insert(0) += 1;
     });
     rescan_widgets(app);
+}
+
+/// True while a deliberate close is still suppressing hover-to-open.
+pub fn hover_suppressed(app: &AppHandle) -> bool {
+    with_state(app, |state| {
+        state
+            .hover_suppressed_until
+            .map(|until| std::time::Instant::now() < until)
+            .unwrap_or(false)
+    })
+    .unwrap_or(false)
+}
+
+pub fn suppress_hover(app: &AppHandle, millis: u64) {
+    let until = std::time::Instant::now() + std::time::Duration::from_millis(millis);
+    with_state(app, |state| state.hover_suppressed_until = Some(until));
 }

@@ -148,7 +148,9 @@ defaulted!(d_corner_radius, f64, 26.0);
 defaulted!(d_activation, ActivationMode, ActivationMode::Hover);
 defaulted!(d_open_delay, f64, 0.14);
 defaulted!(d_close_delay, f64, 0.42);
-defaulted!(d_material, PanelMaterial, PanelMaterial::Glass);
+// Opaque by default: the notch this imitates is solid, and without a real backdrop
+// blur a translucent panel reads as a rendering fault.
+defaulted!(d_material, PanelMaterial, PanelMaterial::Solid);
 defaulted!(d_opacity, f64, 0.96);
 defaulted!(d_accent, String, "#6E9BFF".into());
 defaulted!(d_clipboard_limit, usize, 120);
