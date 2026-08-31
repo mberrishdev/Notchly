@@ -1,151 +1,142 @@
 <p align="center">
-  <img src="docs/assets/app-icon.png" width="96" alt="Notchly icon" />
-  <h1 align="center">Notchly</h1>
+  <img src="docs/assets/app-icon.png" width="72" alt="Notchly icon" />
 </p>
 
-<h3 align="center">A notch that docks to any edge of your screen, and holds whatever you want</h3>
+<h1 align="center">Notchly</h1>
+
+<p align="center"><strong>A notch-shaped panel for your desktop.</strong><br />
+Dock it to any edge. Fill it with widgets.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Tauri-2-24C8DB.svg" />
-  <img src="https://img.shields.io/badge/Rust-1.98-orange.svg" />
-  <img src="https://img.shields.io/badge/macOS-blue.svg" />
-  <img src="https://img.shields.io/badge/bundle-7MB-brightgreen.svg" />
+  <a href="https://github.com/mberrishdev/Notchly/releases/latest"><img src="https://img.shields.io/github/v/release/mberrishdev/Notchly?label=release&color=2f6feb" alt="Latest release" /></a>
+  <a href="https://github.com/mberrishdev/Notchly/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mberrishdev/Notchly/ci.yml?label=CI&color=2da44e" alt="CI status" /></a>
+  <img src="https://img.shields.io/badge/macOS-supported-24292f" alt="macOS supported" />
+  <img src="https://img.shields.io/badge/Windows-build%20available-24292f" alt="Windows build available" />
 </p>
 
-Notchly puts a handle on the edge of your display. Rest the pointer on it and it opens
-into a panel — with the same concave, bezel-hugging corners as the real notch, because
-that is the point. Inside are widgets: five built in, and as many of your own as you
-like.
+Notchly puts a small Handle on the edge of your screen. It opens into a full Panel for
+widgets, shortcuts, system information, media controls, and clipboard history.
 
-**The handle isn't just a line.** Leave it showing the time, a now-playing indicator,
-CPU and battery, or a glyph for every widget you've added — an ambient strip against the
-bezel that you glance at without opening anything. Or keep it a bare sliver. Your call,
-in Settings ▸ Appearance ▸ Idle handle.
+The Panel can dock to the top, bottom, left, or right edge. You can move it, resize it,
+choose what the closed Handle shows, and add your own widgets as plain HTML/CSS/JS
+folders.
 
-**Your own widgets are just folders.** A `widget.json` and an `index.html`. Drop one in,
-and it appears. Save a file, and it reloads. No recompiling, no signing, no SDK.
+## Download
 
-## Requirements
+Download the latest draft or published release from
+[GitHub Releases](https://github.com/mberrishdev/Notchly/releases).
 
-- macOS or Windows. Windows builds are available, but Windows runtime behavior still
-  needs validation on Windows hardware.
-- [Rust](https://rustup.rs) and Node, to build it
+| Platform | Download |
+| --- | --- |
+| macOS, Apple Silicon | `aarch64.dmg` |
+| macOS, Intel | `x64.dmg` |
+| Windows | `x64-setup.exe` |
 
-## Install
+Notchly has no Dock or taskbar icon. Look for the Handle on the edge of your display,
+or its icon in the menu bar or system tray.
+
+These builds are currently unsigned. On macOS, Gatekeeper may report the app as
+damaged. Clear the quarantine flag before opening it:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Notchly.app
+```
+
+On Windows, choose **More info** and then **Run anyway** in the SmartScreen dialog.
+
+## Build From Source
+
+Requirements:
+
+- macOS or Windows
+- [Rust](https://rustup.rs)
+- Node.js and npm
+
+Clone the repository and install the frontend dependencies:
 
 ```bash
 git clone https://github.com/mberrishdev/Notchly.git
 cd Notchly
 npm install
-npx tauri build --bundles app
-open core/target/release/bundle/macos/Notchly.app
 ```
 
-Or run it with hot reload while you work on it:
+Run the app with hot reload:
 
 ```bash
 npx tauri dev
 ```
 
-Notchly has no Dock icon. Look for the menu bar item, or the handle on the edge of
-your display.
+Build a release bundle for the current platform:
 
-## What's in it
-
-**Clock** — time, date, week number, and a second time zone.
-
-**Now Playing** — title, artist, a progress bar and transport for Music and Spotify.
-
-**System** — CPU with a live sparkline and a user/system split, memory with real
-pressure, disk, network throughput, battery with cycle count, and the three processes
-currently costing you the most.
-
-**Quick Launcher** — a search field that ranks prefix matches over initials over
-scattered ones, so `vsc` finds Visual Studio Code.
-
-**Clipboard** — history of everything you have copied, one click to put it back.
-
-**Yours** — see [docs/WidgetAPI.md](docs/WidgetAPI.md).
-
-## The idle handle
-
-Pick an ordered set of chips and the closed handle becomes a small ambient display:
-
-| Chip | Shows |
-| --- | --- |
-| Time | Hours and minutes — stacked on the side edges, `14:32` on the top and bottom |
-| Date | Day of the month and the weekday |
-| CPU / Memory | Load, tinted amber then red as it climbs |
-| Battery | Charge, with a bolt while charging |
-| Now playing | Three bars that animate only while something is actually playing |
-| Clipboard | How many entries are waiting |
-| Widget icons | One glyph per widget in your panel |
-
-Presets get you there in one click, and the chips reorder by dragging.
-
-Only chips that read live values cost anything, and Settings tells you which ones those
-are before you pick them. The default — just the clock — samples nothing at all. The
-now-playing indicator listens for Music and Spotify's own playback notifications rather
-than polling for them.
-
-## Making it yours
-
-- **Drag the handle** anywhere. Past the midpoint of the display it re-docks to that
-  edge; along an edge it just slides. When the panel is open, the grip in its header
-  does the same thing.
-- **Choose what the handle shows** while closed — a line, the time, system readings,
-  your widget icons, or any combination.
-- **Launch at login**, from the menu bar item or Settings ▸ General.
-- **Four edges**, any position along them, any size, and optional display selection.
-- **Hover, click, or hotkey** to open, with the delays under your control.
-- **Glass, tinted, or solid**, with your accent colour, and a live scale model of your
-  display in Settings so you can see the shape as you dial it in.
-
-## Writing a widget
-
+```bash
+npx tauri build
 ```
+
+Windows builds are produced in CI and have not yet been validated on Windows hardware.
+
+## Built-in Widgets
+
+- **Clock**: time, date, and week number.
+- **Now Playing**: playback controls for Music and Spotify.
+- **System**: CPU, memory, disk, network, and battery information.
+- **Quick Launcher**: search for and launch installed applications.
+- **Clipboard**: searchable history of copied text.
+
+The closed Handle can show Idle Chips such as the clock, CPU, memory, battery, media
+activity, clipboard count, and the icons of enabled widgets. Chips reserve their space,
+so the Handle does not move when a value appears or disappears.
+
+## Customize It
+
+- Dock the Panel to any display edge.
+- Drag the Handle to reposition it or move it across the display to change edges.
+- Open with hover, click, or a global hotkey.
+- Adjust open and close delays, size, corner radius, opacity, and accent color.
+- Choose an optional display and launch Notchly at login.
+- Set the Handle's Idle Chips and reorder them by dragging.
+
+## Create A Widget
+
+A widget is a folder containing a manifest and an HTML entry point:
+
+```text
 my-widget/
-  widget.json     ← id, name, icon, height, permissions, declared settings
-  index.html      ← anything you can write for a browser
+  widget.json
+  index.html
 ```
 
-```js
-const stats = await notchly.system.stats();
-document.querySelector('#cpu').textContent = Math.round(stats.cpu.total * 100) + '%';
+Place it in the Notchly Widgets folder, or use **Settings > Custom Widgets > Create**.
+Notchly discovers the folder automatically and reloads it when its files change.
 
-const city = await notchly.settings.get('city');   // a real control in Settings
-await notchly.storage.set('lastSeen', Date.now()); // persisted, private to you
-```
+Widgets can declare settings and request access to system data, notifications, network,
+clipboard history, or shell commands. Sensitive permissions are disabled until granted
+in Settings.
 
-Settings declared in your manifest get **native controls in Notchly's settings window** —
-the same ones the built-in widgets use. Widgets are offline until you grant network
-access, and shell access is off unless you turn it on for that specific widget; anything
-you call without permission rejects with a message saying which switch to flip.
-
-Three examples ship with the app and land in your widgets folder on first launch — a
-pomodoro timer, a weather widget, and a shell command strip. Full reference:
-[docs/WidgetAPI.md](docs/WidgetAPI.md).
+Read the complete widget reference in [docs/WidgetAPI.md](docs/WidgetAPI.md).
 
 ## Privacy
 
-Nothing is collected and nothing is reported. Notchly makes no network requests of its
-own; the only outbound traffic belongs to a widget you granted network access to.
+Notchly does not collect analytics or make network requests of its own. Network access
+belongs to widgets and is disabled until you grant it.
 
-Clipboard history is stored unencrypted in Application Support, so treat it like any
-other local file.
+Clipboard history is stored locally, unencrypted, in the application's support folder.
+macOS may ask for Automation access when Now Playing reads Music or Spotify.
 
-Notchly asks for no Accessibility access. macOS will ask for Automation access the
-first time the Now Playing widget looks at Music or Spotify.
+## Development
 
-## Contributing
+The project uses a Rust core and a plain HTML/CSS/JS frontend. The domain model and
+terminology are defined in [CONTEXT.md](CONTEXT.md). Repository structure and engineering
+decisions are documented in [CLAUDE.md](CLAUDE.md).
 
-`CONTEXT.md` is the domain model and terminology source of truth. `CLAUDE.md` covers
-the repository layout and implementation decisions. See [docs/RELEASING.md](docs/RELEASING.md)
-for release instructions and [docs/WidgetAPI.md](docs/WidgetAPI.md) for widget development.
+Run the Rust test suite and linter:
 
 ```bash
-cd core && cargo test    # 59 tests, headless
+cd core
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
 ```
+
+See [docs/RELEASING.md](docs/RELEASING.md) for the release process.
 
 ## License
 
