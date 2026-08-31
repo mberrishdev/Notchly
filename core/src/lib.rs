@@ -227,7 +227,6 @@ pub fn handle_tray_action(app: &AppHandle, id: &str) {
         "settings" => {
             let _ = open_settings(app.clone());
         }
-        "pin" => mutate_settings(app, |settings| settings.is_pinned = !settings.is_pinned),
         "login" => {
             let enable = !panel::with_state(app, |state| state.settings.launch_at_login)
                 .unwrap_or(false);

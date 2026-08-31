@@ -61,7 +61,6 @@ impl Watchdog {
                     inside_since = None;
                     let since = *outside_since.get_or_insert_with(std::time::Instant::now);
                     if expanded
-                        && !settings.is_pinned
                         && !panel::holds_panel_open(&app)
                         && since.elapsed().as_secs_f64() >= settings.close_delay
                     {

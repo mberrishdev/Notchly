@@ -21,7 +21,6 @@ function fallbackSettings() {
     openDelay: 0.14,
     closeDelay: 0.42,
     closeOnOutsideClick: true,
-    isPinned: false,
     hotkey: { accelerator: "", isEnabled: false },
     material: "solid",
     opacity: 0.96,
@@ -126,7 +125,6 @@ function generalPane() {
       ),
       field("Close when clicking outside", null, toggle(settings.closeOnOutsideClick, (v) =>
         commit((s) => (s.closeOnOutsideClick = v)))),
-      field("Keep the panel open", null, toggle(settings.isPinned, (v) => commit((s) => (s.isPinned = v)))),
     ]),
   );
 

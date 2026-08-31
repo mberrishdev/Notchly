@@ -236,7 +236,7 @@ pub fn close(app: &AppHandle) {
     let generation = {
         let state = app.state::<SharedPanel>();
         let mut guard = state.lock().unwrap();
-        if !guard.expanded || guard.settings.is_pinned {
+        if !guard.expanded {
             return;
         }
         guard.expanded = false;
@@ -292,12 +292,6 @@ pub fn toggle(app: &AppHandle) {
         guard.expanded
     };
     if expanded {
-        // An explicit toggle closes even when pinned.
-        {
-            let state = app.state::<SharedPanel>();
-            let mut guard = state.lock().unwrap();
-            guard.settings.is_pinned = false;
-        }
         close(app);
     } else {
         open(app);

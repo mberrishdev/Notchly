@@ -238,11 +238,6 @@ function wire() {
     invoke("open_settings");
   });
 
-  document.getElementById("pin-button").addEventListener("click", () => {
-    if (!current) return;
-    const settings = { ...current.settings, isPinned: !current.settings.isPinned };
-    panel.updateSettings(settings);
-  });
 }
 
 async function start() {

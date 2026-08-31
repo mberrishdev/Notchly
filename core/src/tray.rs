@@ -20,9 +20,6 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let settings = panel::with_state(app, |state| state.settings.clone()).unwrap_or_default();
 
     let toggle = MenuItem::with_id(app, "toggle", "Show Panel", true, None::<&str>)?;
-    let pin = CheckMenuItem::with_id(
-        app, "pin", "Keep Panel Open", true, settings.is_pinned, None::<&str>,
-    )?;
     let login = CheckMenuItem::with_id(
         app, "login", "Launch at Login", true, settings.launch_at_login, None::<&str>,
     )?;
@@ -41,7 +38,6 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         app,
         &[
             &toggle,
-            &pin,
             &login,
             &PredefinedMenuItem::separator(app)?,
             &edges[0],

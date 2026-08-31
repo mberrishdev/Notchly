@@ -200,7 +200,6 @@ pub struct Settings {
     pub activation: ActivationMode,
     pub open_delay: f64,
     pub close_delay: f64,
-    pub is_pinned: bool,
     pub close_on_outside_click: bool,
 
     pub material: PanelMaterial,
@@ -241,7 +240,6 @@ impl Default for Settings {
             activation: d_activation(),
             open_delay: d_open_delay(),
             close_delay: d_close_delay(),
-            is_pinned: false,
             close_on_outside_click: true,
             material: d_material(),
             opacity: d_opacity(),
