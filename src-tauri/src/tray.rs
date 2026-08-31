@@ -56,8 +56,11 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
+    // The app icon can't double as the tray icon: a template image keeps only the
+    // alpha channel, so the whole squircle plate renders as a solid blob. This is a
+    // mark drawn for 18pt, which is the height Tauri scales tray icons to.
     TrayIconBuilder::with_id("notchly")
-        .icon(app.default_window_icon().cloned().expect("bundled icon"))
+        .icon(tauri::include_image!("icons/menubar.png"))
         .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
