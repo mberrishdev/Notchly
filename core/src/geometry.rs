@@ -27,9 +27,6 @@ impl Rect {
     pub fn max_y(&self) -> f64 {
         self.y + self.height
     }
-    pub fn contains(&self, x: f64, y: f64) -> bool {
-        x >= self.x && x < self.max_x() && y >= self.y && y < self.max_y()
-    }
 }
 
 /// Size of the idle handle for a given set of chips.

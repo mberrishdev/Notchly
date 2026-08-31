@@ -6,11 +6,11 @@
 
 use crate::panel;
 use crate::services::metrics::Sampler;
-use crate::settings::{Settings, WidgetKind};
+use crate::settings::Settings;
 use crate::widgets::Permission;
 use serde_json::{json, Value};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 pub struct Denied(pub String);
 
@@ -356,16 +356,4 @@ fn run_shell(command: &str, timeout: f64) -> Value {
         }),
         Err(error) => json!({ "code": -1, "stdout": "", "stderr": error.to_string() }),
     }
-}
-
-/// Which widget kinds can reach the bridge at all.
-pub fn is_web_widget(app: &AppHandle, widget_id: &str) -> bool {
-    panel::with_state(app, |state| {
-        state
-            .settings
-            .slots
-            .iter()
-            .any(|slot| slot.widget_id == widget_id && slot.kind == WidgetKind::Web)
-    })
-    .unwrap_or(false)
 }

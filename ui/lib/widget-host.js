@@ -9,13 +9,13 @@ import { invoke } from "./bridge.js";
 
 const frames = new Map();
 
-export function widgetUrl(pkg) {
+function widgetUrl(pkg) {
   const entry = pkg.manifest.entry || "index.html";
   return `widget://localhost/${encodeURIComponent(pkg.manifest.id)}/${entry}?rev=${pkg.revision}`;
 }
 
 /** Height the widget should get: its declared one, or what it measured, within bounds. */
-export function resolveHeight(manifest, measured) {
+function resolveHeight(manifest, measured) {
   const requested = manifest.height ?? measured ?? 0;
   const min = manifest.minHeight ?? 40;
   const max = manifest.maxHeight ?? 520;

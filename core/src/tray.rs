@@ -7,7 +7,7 @@ use crate::panel;
 use crate::settings::ScreenEdge;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 pub const EDGES: [(&str, ScreenEdge, &str); 4] = [
     ("edge-top", ScreenEdge::Top, "Dock Top"),

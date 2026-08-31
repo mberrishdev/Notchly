@@ -85,31 +85,6 @@ fn log_frontend(message: String) {
 }
 
 #[tauri::command]
-fn capture_panel(app: AppHandle, path: String) -> serde_json::Value {
-    match app.get_webview_window(PANEL_LABEL) {
-        Some(window) => platform::capture_png(&window, &path),
-        None => serde_json::json!({ "error": "panel window missing" }),
-    }
-}
-
-/// Reports what the native window layer actually looks like. Kept from the Phase 0
-/// spike because transparency is the one capability the whole app depends on, and a
-/// regression in it would otherwise be invisible to the test suite.
-#[tauri::command]
-fn window_report(app: AppHandle) -> serde_json::Value {
-    match app.get_webview_window(PANEL_LABEL) {
-        Some(window) => {
-            let mut report = platform::describe_window(&window);
-            if let Some(object) = report.as_object_mut() {
-                object.insert("pixels".into(), platform::sample_transparency(&window));
-            }
-            report
-        }
-        None => serde_json::json!({ "error": "panel window missing" }),
-    }
-}
-
-#[tauri::command]
 async fn widget_invoke(
     app: AppHandle,
     widget_id: String,
@@ -313,8 +288,6 @@ pub fn run() {
             drag_panel,
             end_drag,
             update_settings,
-            window_report,
-            capture_panel,
             log_frontend,
             widget_invoke,
             list_widgets,
@@ -401,6 +374,18 @@ fn run_capture_pass(app: AppHandle, dir: String) {
 
     std::thread::sleep(std::time::Duration::from_millis(2200));
     shot("idle");
+
+    // Transparency is the one capability the whole app rests on, and a regression in
+    // it would be invisible to the test suite — so report it alongside the captures.
+    {
+        let probe = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(window) = probe.get_webview_window(PANEL_LABEL) {
+                println!("NOTCHLY-WINDOW {}", platform::describe_window(&window));
+                println!("NOTCHLY-PIXELS {}", platform::sample_transparency(&window));
+            }
+        });
+    }
 
     let opener = app.clone();
     let _ = app.run_on_main_thread(move || panel::open(&opener));

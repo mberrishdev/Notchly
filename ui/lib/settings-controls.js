@@ -62,7 +62,7 @@ export function select(options, current, onChange) {
   return node;
 }
 
-export function textInput(value, onChange, placeholder) {
+function textInput(value, onChange, placeholder) {
   const input = el("input");
   input.type = "text";
   input.value = value ?? "";

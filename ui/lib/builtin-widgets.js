@@ -9,7 +9,7 @@ const el = (tag, className, html) => {
 
 const percent = (fraction) => `${Math.round((fraction ?? 0) * 100)}%`;
 
-export function formatBytes(bytes) {
+function formatBytes(bytes) {
   const value = Number(bytes) || 0;
   if (value < 1024) return `${value} B`;
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(0)} KB`;
@@ -17,7 +17,7 @@ export function formatBytes(bytes) {
   return `${(value / 1024 ** 3).toFixed(2)} GB`;
 }
 
-export function formatRate(bytesPerSecond) {
+function formatRate(bytesPerSecond) {
   const value = Math.max(0, Number(bytesPerSecond) || 0);
   if (value < 1024) return `${Math.round(value)} B/s`;
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(0)} KB/s`;
@@ -25,7 +25,7 @@ export function formatRate(bytesPerSecond) {
   return `${(value / 1024 ** 3).toFixed(2)} GB/s`;
 }
 
-export function formatDuration(seconds) {
+function formatDuration(seconds) {
   const total = Math.max(0, Math.floor(seconds ?? 0));
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
@@ -35,7 +35,7 @@ export function formatDuration(seconds) {
   return `${minutes}m`;
 }
 
-export function timecode(seconds) {
+function timecode(seconds) {
   const total = Math.max(0, Math.round(seconds ?? 0));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
@@ -168,7 +168,7 @@ function meterRow(label, fraction, detail) {
 }
 
 /** Filled line chart for the CPU history strip. */
-export function sparklinePath(values, width, height) {
+function sparklinePath(values, width, height) {
   if (!values || values.length < 2) return "";
   const step = width / (values.length - 1);
   return values
