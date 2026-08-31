@@ -47,3 +47,15 @@ jobs:
       - run: npm ci
       - name: Build bundle
         run: npx tauri build --bundles ${{ runner.os == 'Windows' && 'nsis' || 'app' }}
+
+      # Unsigned, so both platforms will warn on launch — but it means a Windows
+      # installer is downloadable from any commit, which is the only way to try the
+      # Windows build without a release.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notchly-${{ matrix.os }}
+          path: |
+            core/target/release/bundle/nsis/*.exe
+            core/target/release/bundle/macos/*.app
+          if-no-files-found: warn
+          retention-days: 14

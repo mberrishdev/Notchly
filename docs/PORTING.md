@@ -127,6 +127,22 @@ each silently resets the other's widget list. The Tauri build therefore uses
 Only run one at a time if you want to judge the panel — otherwise two panels dock to
 the same screen edge and overlap.
 
+## Why there is no iOS build
+
+Tauri v2 can target iOS, so the question comes up. It does not apply here.
+
+Notchly is a window that docks to the edge of a desktop display: it floats above other
+applications, refuses focus, follows the pointer, and resizes itself as it opens. iOS
+has no windows an app can position, no always-on-top layer, no pointer to hover, no
+menu bar, and no global shortcut. The five built-in widgets fare no better — no menu
+bar item, no clipboard history across apps, no launching other applications, and
+custom widgets can be granted shell access, which iOS does not have and the App Store
+would not permit.
+
+What would survive a port is the widget format and the panel's stylesheet, and an app
+built from those would not be Notchly. If something is wanted on a phone it should be
+designed for one, sharing the `widget.json` contract rather than the code.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs `cargo test` and `cargo clippy -D warnings` on both
