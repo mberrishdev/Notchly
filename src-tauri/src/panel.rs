@@ -31,6 +31,7 @@ pub struct PanelState {
     /// Bumped on every state change so a stale collapse timer can tell it was replaced.
     generation: Arc<AtomicU64>,
     pub dragging: bool,
+    pub ambient: crate::services::ambient::Ambient,
     /// The last snapshot emitted, so `get_state` never has to re-enumerate monitors —
     /// which can fail while the app is still starting up.
     pub last_snapshot: Option<PanelSnapshot>,
@@ -43,6 +44,7 @@ impl PanelState {
             expanded: false,
             generation: Arc::new(AtomicU64::new(0)),
             dragging: false,
+            ambient: Default::default(),
             last_snapshot: None,
         }
     }
@@ -177,9 +179,13 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
     let snapshot = PanelSnapshot {
         expanded,
         metrics: geometry.metrics(expanded),
-        settings,
+        settings: settings.clone(),
     };
-    with_state(app, |state| state.last_snapshot = Some(snapshot.clone()));
+    let handle = app.clone();
+    with_state(app, |state| {
+        state.last_snapshot = Some(snapshot.clone());
+        state.ambient.sync(&handle, expanded, &settings);
+    });
     let _ = app.emit("panel-state", snapshot);
 }
 
@@ -195,6 +201,8 @@ pub fn open(app: &AppHandle) {
     }
     // Grow the (transparent) window first so the animation has room to play out.
     refresh(app, true);
+    // Don't leave the System widget blank until the first scheduled tick.
+    crate::services::ambient::Ambient::sample_now(app, true);
     if let Some(window) = app.get_webview_window(PANEL_LABEL) {
         let _ = window.show();
     }

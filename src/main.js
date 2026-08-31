@@ -124,9 +124,9 @@ async function start() {
     current = event.payload;
     render();
   });
-  await listen("ambient", (event) => {
-    ambient = { ...ambient, ...event.payload };
-    if (current && !current.metrics.expanded) render();
+  await listen("metrics", (event) => {
+    ambient = { ...ambient, metrics: event.payload };
+    render();
   });
 
   current = await panel.state();
