@@ -212,8 +212,17 @@ mod imp {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{
         GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
-        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+        WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
     };
+
+    fn with_non_activating_flags(current: isize) -> isize {
+        current
+            | WS_EX_LAYERED.0 as isize
+            | WS_EX_NOACTIVATE.0 as isize
+            | WS_EX_TOPMOST.0 as isize
+            | WS_EX_TOOLWINDOW.0 as isize
+    }
 
     /// Rebuilt from the raw pointer rather than passed through, so a version skew
     /// between Tauri's `windows` crate and ours cannot turn into a type error.
@@ -230,10 +239,10 @@ mod imp {
         // NOACTIVATE is the counterpart of macOS's non-activating panel: clicking the
         // panel must not pull focus off whatever the user is actually working in.
         // TOOLWINDOW keeps it out of Alt-Tab, TOPMOST floats it above ordinary windows.
-        let wanted = extended_style(handle)
-            | WS_EX_NOACTIVATE.0 as isize
-            | WS_EX_TOPMOST.0 as isize
-            | WS_EX_TOOLWINDOW.0 as isize;
+        // LAYERED is required for transparent WebView windows on Windows to remain
+        // click-through safe and preserve their alpha compositing; without it the
+        // overlay stops behaving like a true accessory panel.
+        let wanted = with_non_activating_flags(extended_style(handle));
         unsafe {
             SetWindowLongPtrW(handle, GWL_EXSTYLE, wanted);
             // The style change only takes effect once the window is re-positioned.
@@ -246,6 +255,23 @@ mod imp {
                 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
             );
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::with_non_activating_flags;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+        };
+
+        #[test]
+        fn windows_panel_style_keeps_accessory_flags() {
+            let style = with_non_activating_flags(0);
+            assert_ne!(style & WS_EX_LAYERED.0 as isize, 0);
+            assert_ne!(style & WS_EX_NOACTIVATE.0 as isize, 0);
+            assert_ne!(style & WS_EX_TOPMOST.0 as isize, 0);
+            assert_ne!(style & WS_EX_TOOLWINDOW.0 as isize, 0);
         }
     }
 
@@ -297,7 +323,6 @@ mod imp {
 pub fn configure_panel(window: &WebviewWindow) {
     imp::configure_panel(window)
 }
-
 pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
     imp::describe_window(window)
 }
