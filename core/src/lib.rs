@@ -159,15 +159,9 @@ fn open_settings(app: AppHandle) -> Result<(), String> {
     .inner_size(720.0, 620.0)
     .min_inner_size(660.0, 520.0)
     .resizable(true)
-    .visible(false)
     .center()
     .build()
-    .and_then(|window| {
-        window.show()?;
-        window.unminimize()?;
-        window.set_focus()?;
-        Ok(())
-    })
+    .map(|_| ())
     .map_err(|error| error.to_string())
 }
 
