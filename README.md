@@ -6,10 +6,10 @@
 <h3 align="center">A notch that docks to any edge of your screen, and holds whatever you want</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Swift-6-orange.svg" />
-  <img src="https://img.shields.io/badge/macOS-26+-blue.svg" />
-  <img src="https://img.shields.io/badge/Apple%20Silicon-arm64-lightgrey.svg" />
-  <img src="https://img.shields.io/badge/dependencies-none-brightgreen.svg" />
+  <img src="https://img.shields.io/badge/Tauri-2-24C8DB.svg" />
+  <img src="https://img.shields.io/badge/Rust-1.98-orange.svg" />
+  <img src="https://img.shields.io/badge/macOS-blue.svg" />
+  <img src="https://img.shields.io/badge/bundle-7MB-brightgreen.svg" />
 </p>
 
 Notchly puts a handle on the edge of your display. Rest the pointer on it and it opens
@@ -27,39 +27,43 @@ and it appears. Save a file, and it reloads. No recompiling, no signing, no SDK.
 
 ## Requirements
 
-- macOS 26 (Tahoe) on Apple Silicon
+- macOS. Windows is scaffolded but not yet implemented — see
+  [docs/PORTING.md](docs/PORTING.md)
+- [Rust](https://rustup.rs) and Node, to build it
 
 ## Install
 
 ```bash
 git clone https://github.com/mberrishdev/Notchly.git
 cd Notchly
-open Notchly.xcodeproj   # ⌘R
+npm install
+npx tauri build --bundles app
+open src-tauri/target/release/bundle/macos/Notchly.app
 ```
 
-Or headless:
+Or run it with hot reload while you work on it:
 
 ```bash
-xcodebuild -project Notchly.xcodeproj -scheme Notchly -configuration Release build
+npx tauri dev
 ```
+
+Notchly has no Dock icon. Look for the menu bar item, or the handle on the edge of
+your display.
 
 ## What's in it
 
 **Clock** — time, date, week number, and a second time zone.
 
-**Now Playing** — artwork, a scrubbable progress bar, and transport for Music and
-Spotify. Other players fall back to synthesised media keys, which only work if you have
-separately given Notchly Accessibility access — it won't ask you for it.
+**Now Playing** — title, artist, a progress bar and transport for Music and Spotify.
 
 **System** — CPU with a live sparkline and a user/system split, memory with real
 pressure, disk, network throughput, battery with cycle count, and the three processes
 currently costing you the most.
 
-**Quick Launcher** — a pinned grid you can drag apps into, and a search field that ranks
-prefix matches over initials over scattered ones, so `vsc` finds Visual Studio Code.
+**Quick Launcher** — a search field that ranks prefix matches over initials over
+scattered ones, so `vsc` finds Visual Studio Code.
 
-**Clipboard** — searchable history with pinning, image capture, and per-app attribution.
-Skips anything a password manager marks as concealed.
+**Clipboard** — history of everything you have copied, one click to put it back.
 
 **Yours** — see [docs/WidgetAPI.md](docs/WidgetAPI.md).
 
@@ -125,25 +129,23 @@ pomodoro timer, a weather widget, and a shell command strip. Full reference:
 
 ## Privacy
 
-Nothing is collected and nothing is reported. Notchly makes exactly one network request
-of its own — fetching cover art from Spotify's CDN, and only while Spotify is what's
-playing. Every other outbound request belongs to a widget you granted network access to.
+Nothing is collected and nothing is reported. Notchly makes no network requests of its
+own; the only outbound traffic belongs to a widget you granted network access to.
 
 Clipboard history is stored unencrypted in Application Support, so treat it like any
-other local file. It skips anything a password manager marks as concealed.
+other local file.
 
-Notchly asks for no Accessibility access: the global shortcut uses Carbon's hotkey API,
-which doesn't need it. macOS will ask for Automation access the first time the Now
-Playing widget looks at Music or Spotify.
+Notchly asks for no Accessibility access. macOS will ask for Automation access the
+first time the Now Playing widget looks at Music or Spotify.
 
 ## Contributing
 
 `CONTEXT.md` is the domain model and the terminology is binding. `CLAUDE.md` covers the
-layout and the decisions that aren't up for relitigating.
+layout and the decisions that aren't up for relitigating. `docs/PORTING.md` records what
+this was ported from and which gaps are still open.
 
 ```bash
-xcodegen generate    # after adding or moving files
-xcodebuild -project Notchly.xcodeproj -scheme Notchly -destination 'platform=macOS,arch=arm64' test
+cd src-tauri && cargo test    # 59 tests, headless
 ```
 
 ## License

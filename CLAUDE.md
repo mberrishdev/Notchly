@@ -1,115 +1,96 @@
 # Notchly
 
 A notch-shaped panel that docks to any edge of the display, holds widgets, and lets
-anyone drop in their own as a plain HTML/CSS/JS folder. macOS 26, Apple Silicon only.
-Read `CONTEXT.md` first — it is the domain model and rulebook; its terminology is
-binding.
+anyone drop in their own as a plain HTML/CSS/JS folder. Read `CONTEXT.md` first — it is
+the domain model and rulebook; its terminology is binding.
+
+Built with Tauri: a Rust core that owns the window and everything touching the system,
+and a plain HTML/CSS/JS frontend that draws the panel. `docs/PORTING.md` records what
+this replaced and why, including the gaps that are still open.
 
 ## State of the repo
 
-Working end to end: the panel opens, docks to all four edges, drags to reposition,
-shows a configurable ambient strip while closed, and hosts five built-in widgets plus
-any number of custom ones with hot reload.
+Working end to end on macOS: the panel opens on hover, docks to all four edges, drags
+to reposition, shows a configurable ambient strip while closed, hosts five built-in
+widgets plus any number of custom ones with hot reload, and has a five-pane settings
+window. Windows is scaffolded but not implemented — see `docs/PORTING.md`.
 
-61 unit tests cover the notch geometry, the window frames, drag placement, idle handle
-sizing, settings decoding, permission gating, launcher search ranking, the widget
-manifest format, and the formatters. They are the parts where a silent mistake would be invisible on screen — the
-views themselves are not tested.
+59 Rust tests cover the notch geometry, window frames, drag placement, idle handle
+sizing, settings decoding, permission gating, the widget manifest format, the widget
+protocol's path handling and content policy, and launcher search ranking. They are the
+parts where a silent mistake would be invisible on screen; the views are not tested.
 
 ## Stack decisions (already made, do not relitigate)
 
-- Plain committed `Notchly.xcodeproj`, generated once via `xcodegen` from `project.yml`
-  and then treated as a normal checked-in project — regenerate only when files or
-  targets are added, never as part of the build
-- **AppKit is the composition root, not SwiftUI.** `main.swift` builds `NSApplication`
-  by hand. The panel is a borderless `nonactivatingPanel` at `.statusBar` level with an
-  `NSHostingView` inside; the SwiftUI `App` lifecycle gives no control over window level
-  or activation, both of which this app lives or dies on
-- No third-party dependencies. `WKWebView` hosts custom widgets, Carbon's
-  `RegisterEventHotKey` provides the global shortcut (unlike a CGEvent tap it needs no
-  Accessibility access), `SMAppService` handles launch-at-login
-- Now Playing goes through `osascript` as a subprocess, not `NSAppleScript` and not the
-  private MediaRemote framework. A busy player can take seconds to answer an Apple
-  event, which would stall whichever thread `NSAppleScript` ran on
-- App Sandbox off (`ENABLE_APP_SANDBOX = NO`) — custom widgets can be granted shell
-  access, and the launcher reads other apps' bundles
-- Scaffolding values (bundle ID, entitlements, Info.plist keys): `docs/ProjectSettings.md`
+- **Rust owns the window and the arithmetic; the frontend draws what it is told.** The
+  `panel-state` event carries shape size, radii and offsets, so there is one source of
+  truth for geometry rather than two implementations that drift
+- **No bundler and no framework.** `frontendDist` points straight at `src/`. The panel
+  is the same kind of thing the widgets are — HTML in a webview — and a build step
+  would only obscure that
+- **Custom widgets are iframes, not one webview each.** Tauri's multi-webview support
+  is behind an `unstable` flag with open bugs. Sandboxed without `allow-same-origin`,
+  so each widget gets an opaque origin
+- **Hover is decided in Rust, not the DOM.** A non-activating panel does not reliably
+  deliver `mouseenter`/`mouseleave`, and the window resizes underneath the pointer as
+  it opens
+- **The panel is opaque.** A shaped window cannot sit on a real backdrop blur without
+  it showing as a rectangle behind the concave corners, and a translucent fill with
+  nothing behind it reads as a rendering fault
 
-## Layout (modules as folders)
+## Layout
 
-- `Notchly/App/` — composition root: `main.swift`, `AppDelegate` (status menu, hotkey
-  wiring, first run), and `AppEnvironment`, the one service container everything else
-  reaches through
-- `Notchly/Models/` — value types only, no behaviour that touches the system:
-  `NotchlySettings` (and its hand-written tolerant decoder), `ScreenEdge`,
-  `PanelPlacement`, `IdleChip`, `WidgetSlot`, `WidgetDescriptor`, `WidgetPermission`,
-  `WebWidgetManifest`, `JSONValue`
-- `Notchly/Panel/` — `NotchShape` (the concave-cornered outline), `PanelGeometry`
-  (settings + display → window frames), `IdleHandleLayout` (how big the closed handle
-  needs to be for its chips), `NotchPanel`, `PanelController` (the open/close state
-  machine and drag-to-reposition), and the panel's SwiftUI root
-- `Notchly/Widgets/` — `WidgetRegistry` (the built-in descriptors and view factory),
-  `Builtin/` (one file per built-in widget), `Web/` (the `WKWebView` host,
-  `WebWidgetStore` folder watcher, `WebWidgetBridge`, and `WebWidgetRuntime`, which is
-  the injected JavaScript)
-- `Notchly/Services/` — everything that talks to the system: `SystemMetrics` (Mach and
-  IOKit), `MediaController` + `AppleScriptRunner`, `ClipboardService`, `AppCatalog`,
-  `HotKeyCenter`, `LoginItemManager`
-- `Notchly/Persistence/` — `SettingsStore` (debounced writes) and `AppPaths`
-- `Notchly/Support/` — small pure helpers with no state of their own: `Format`,
-  `Color+Hex`, `HotKeyFormatter`, `Notifier`, `NSImage+PNG`, `NSScreen+Notchly`
-- `Notchly/UI/` — shared SwiftUI components (`WidgetCard`, `IconButton`, `HoverRow`,
-  `Charts`, `PanelSearchField`, `MarqueeText`, `FlowRow`), `IdleHandleView` (what the
-  closed handle draws), and `UI/Settings/`, the settings window
+- `src/` — the frontend, running inside the webview. `main.js` is the state machine;
+  `lib/notch-shape.js` builds the outline; `lib/panel-view.js` paints and animates it;
+  `lib/widget-host.js` hosts custom widgets and relays their bridge calls;
+  `lib/widget-runtime.js` is injected into them; `settings.js` and
+  `lib/settings-*.js` are the settings window
+- `src-tauri/src/` — the Rust core
+  - `panel.rs` — the window and the open/close state machine
+  - `geometry.rs` — settings + display → window frames, and `IdleHandleLayout`
+  - `hover.rs` — the cursor watchdog behind hover-to-open
+  - `settings.rs` — the persisted model, with serde defaults for tolerant decoding
+  - `widgets.rs`, `widget_protocol.rs`, `bridge.rs` — discovery, the `widget://`
+    scheme with its per-widget CSP, and the `window.notchly` implementation
+  - `services/` — everything that talks to the system: metrics, media, clipboard,
+    apps, notifications, and the sampling cadence in `ambient.rs`
+  - `platform.rs` — per-platform native window behaviour
+- `src-tauri/resources/ExampleWidgets/` — bundled starter widgets, copied into the
+  user's widgets folder on first launch
+- `scripts/` — icon generators. They are Swift, and macOS-only, because they draw with
+  AppKit; they are developer tools run by hand, not part of the build, so nothing about
+  shipping on Windows depends on them
 
 ## Code style
 
-- Standard Swift formatting, 4-space indentation
-- No `// MARK:` comments — a file that needs section markers needs splitting, not markers
-- No `public` — this is one app target, so the modifier means nothing and reads as noise
-- Use `CONTEXT.md` terminology in code rather than drifting to a synonym it avoids
-
-## SwiftUI notes
-
-Two things in here look like mistakes and are not. Both were bugs first.
-
-- **Services are injected as environment objects individually**, never reached through
-  `AppEnvironment`. Nested `ObservableObject`s do not propagate: a view that reads
-  `environment.metrics.cpu` is observing `AppEnvironment` alone and will render once and
-  then freeze. `PanelController` passes `metrics`, `media`, `clipboard`, `catalog`, and
-  `registry` to `.environmentObject` in their own right, and views declare each one they
-  read.
-- **The panel's shadow is a blurred copy of `NotchShape`, not `.shadow()`.** A view
-  containing a `Material` flattens to its bounding box for shadow purposes, so
-  `.shadow()` draws a rectangle around the panel instead of following its corners.
+- 4-space indentation in Rust, 2 in the frontend (see `.editorconfig`)
+- No section-marker comments — a file that needs them needs splitting
+- Comments explain why, not what, and are worth writing where a reader would otherwise
+  assume a mistake
 
 ## Testing
 
-`xcodebuild -project Notchly.xcodeproj -scheme Notchly -destination 'platform=macOS,arch=arm64' test`
-
-The tests deliberately avoid anything that needs a window server or a real display, so
-they run headless. Pure logic that the UI depends on gets pulled out into a testable
-type rather than tested through a view — `PanelPlacement`, `IdleHandleLayout`, and
-`AppCatalog.rank` all exist in that shape for this reason.
-
-`NotchlyTests/HandleRenderer.swift` is a development aid, not an assertion: it
-rasterises the idle handle in each orientation to PNGs so the layout can be looked at,
-which is otherwise hard for a surface that only appears at the edge of a live display.
-It skips unless given somewhere to write:
-
 ```bash
-TEST_RUNNER_NOTCHLY_RENDER_DIR=/tmp/render xcodebuild -project Notchly.xcodeproj \
-  -scheme Notchly -destination 'platform=macOS,arch=arm64' \
-  test -only-testing:NotchlyTests/HandleRenderer
+cd src-tauri && cargo test          # 59 tests, headless
+npx tauri build --bundles app       # release bundle
 ```
+
+Pure logic the UI depends on is pulled into a testable type rather than tested through
+a view — `Placement`, `HandleLayout` and `apps::rank` all exist in that shape.
+
+Setting `NOTCHLY_CAPTURE_DIR` makes the app walk itself through its states and save a
+PNG of each. It only works while the window server is compositing the panel: launched
+straight from the binary the app is never activated, WebKit reports the document
+hidden, and every capture comes back transparent even though the DOM is correct. **A
+blank capture means "not composited", not "not rendered."**
 
 ## Roadmap
 
-1. ~~Scaffold Xcode project + folder layout~~ done
-2. ~~Notch shape, panel window, open/close state machine, four-edge docking~~ done
-3. ~~Five built-in widgets~~ done
-4. ~~Custom widget format, JS bridge, permissions, hot reload~~ done
-5. ~~Settings window, drag-to-reposition~~ done
-6. ~~Idle handle chips: clock, system readings, now playing, widget icons~~ done
-7. Custom widgets contributing their own idle chip — not started
-8. Multi-panel support (more than one panel on different edges) — not started
+1. ~~Panel shell: geometry, window, open/close state machine, four-edge docking~~ done
+2. ~~System metrics, menu bar item, global hotkey, launch at login~~ done
+3. ~~Custom widget host: `widget://` scheme, per-widget CSP, permissions, hot reload~~ done
+4. ~~Five built-in widgets~~ done
+5. ~~Settings window~~ done
+6. Windows: `WS_EX_NOACTIVATE`, and Now Playing via
+   `GlobalSystemMediaTransportControlsSessionManager` — not started
+7. Launcher app icons; per-widget file isolation — not started
