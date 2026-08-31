@@ -451,6 +451,9 @@ async function start() {
     });
   }
 
+  // Paint the fallback before waiting on Rust so a slow or unavailable native command
+  // cannot leave the settings window looking blank.
+  render();
   const state = await invoke("get_state").catch(() => null);
   settings = state?.settings ?? fallbackSettings();
   render();

@@ -60,8 +60,9 @@ stands: shell access for widgets alone would fail review.
 The Settings window can check for and install updates through Tauri's updater. Releases
 must include updater metadata at the configured GitHub endpoint, and production bundles
 must be signed with the private key corresponding to the public key in
-`core/tauri.conf.json`. Generate a keypair with `npx tauri signer generate`; keep the
-private key outside the repository.
+`core/tauri.conf.json`. Configure `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` as GitHub Actions secrets. Generate a keypair with
+`npx tauri signer generate`; keep the private key outside the repository.
 
 ## iOS
 

@@ -75,6 +75,10 @@ body {
   overflow-y: auto;
   padding: 26px 24px 40px;
 }
+.loading-state {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
 h2 {
   font-size: 10px;
   font-weight: 600;
