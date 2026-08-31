@@ -453,6 +453,7 @@ async function start() {
 
   const state = await invoke("get_state").catch(() => null);
   settings = state?.settings ?? fallbackSettings();
+  render();
 
   const results = await Promise.allSettled([
     invoke("list_widgets"),
@@ -467,13 +468,16 @@ async function start() {
   await listen("panel-state", (event) => {
     settings = event.payload?.settings ?? settings;
     render();
-  });
+  }).catch((error) => report("panel listener failed", String(error)));
   await listen("widgets", (event) => {
     catalog = event.payload ?? { packages: [], failures: [] };
     render();
-  });
+  }).catch((error) => report("widget listener failed", String(error)));
 
   render();
 }
 
-start();
+start().catch((error) => {
+  report("startup failed", `${error?.name}: ${error?.message} | ${error?.stack ?? ""}`);
+  render();
+});
