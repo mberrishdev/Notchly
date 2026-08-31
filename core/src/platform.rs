@@ -258,23 +258,6 @@ mod imp {
         }
     }
 
-    #[cfg(test)]
-    mod tests {
-        use super::with_non_activating_flags;
-        use windows::Win32::UI::WindowsAndMessaging::{
-            WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-        };
-
-        #[test]
-        fn windows_panel_style_keeps_accessory_flags() {
-            let style = with_non_activating_flags(0);
-            assert_ne!(style & WS_EX_LAYERED.0 as isize, 0);
-            assert_ne!(style & WS_EX_NOACTIVATE.0 as isize, 0);
-            assert_ne!(style & WS_EX_TOPMOST.0 as isize, 0);
-            assert_ne!(style & WS_EX_TOOLWINDOW.0 as isize, 0);
-        }
-    }
-
     pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
         let Some(handle) = hwnd(window) else {
             return json!({ "error": "no hwnd" });
@@ -298,6 +281,23 @@ mod imp {
 
     pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
         json!({ "error": "window capture is implemented for macOS only" })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::with_non_activating_flags;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+        };
+
+        #[test]
+        fn windows_panel_style_keeps_accessory_flags() {
+            let style = with_non_activating_flags(0);
+            assert_ne!(style & WS_EX_LAYERED.0 as isize, 0);
+            assert_ne!(style & WS_EX_NOACTIVATE.0 as isize, 0);
+            assert_ne!(style & WS_EX_TOPMOST.0 as isize, 0);
+            assert_ne!(style & WS_EX_TOOLWINDOW.0 as isize, 0);
+        }
     }
 }
 
