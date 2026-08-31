@@ -11,8 +11,8 @@
 use crate::widgets::Permission;
 use std::path::{Component, Path, PathBuf};
 
-pub const RUNTIME_JS: &str = include_str!("../../src/lib/widget-runtime.js");
-pub const BASE_CSS: &str = include_str!("../../src/styles/widget-base.css");
+pub const RUNTIME_JS: &str = include_str!("../../ui/lib/widget-runtime.js");
+pub const BASE_CSS: &str = include_str!("../../ui/styles/widget-base.css");
 
 /// Splits `widget://localhost/<widget-id>/<path>` into its two halves.
 ///

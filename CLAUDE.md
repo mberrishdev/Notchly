@@ -25,7 +25,7 @@ parts where a silent mistake would be invisible on screen; the views are not tes
 - **Rust owns the window and the arithmetic; the frontend draws what it is told.** The
   `panel-state` event carries shape size, radii and offsets, so there is one source of
   truth for geometry rather than two implementations that drift
-- **No bundler and no framework.** `frontendDist` points straight at `src/`. The panel
+- **No bundler and no framework.** `frontendDist` points straight at `ui/`. The panel
   is the same kind of thing the widgets are — HTML in a webview — and a build step
   would only obscure that
 - **Custom widgets are iframes, not one webview each.** Tauri's multi-webview support
@@ -40,7 +40,12 @@ parts where a silent mistake would be invisible on screen; the views are not tes
 
 ## Layout
 
-- `src/` — the frontend, running inside the webview. `main.js` is the state machine;
+Two top-level source trees, because there are two programs: a Rust binary that owns the
+window and a web page that draws inside it. Tauri's own convention names the Rust half
+`src-tauri`; the other half is `ui` rather than `src` so the pair reads as two different
+things rather than a duplicate.
+
+- `ui/` — the frontend, running inside the webview. `main.js` is the state machine;
   `lib/notch-shape.js` builds the outline; `lib/panel-view.js` paints and animates it;
   `lib/widget-host.js` hosts custom widgets and relays their bridge calls;
   `lib/widget-runtime.js` is injected into them; `settings.js` and
