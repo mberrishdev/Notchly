@@ -33,13 +33,13 @@ ordered list of them; an empty list is the bare line.
 Two rules make the Handle stable:
 
 1. **A chip reserves its space whether or not it currently has a value.** Space is
-   computed from `IdleChip.extent`, never measured after layout. A Handle that resized
+   computed from `IdleChip::extent`, never measured after layout. A Handle that resized
    itself when a song started would move the drag target out from under the pointer.
 2. **Chips render for their orientation, they are never rotated.** On the left and right
    Edges they stack in a column and lay out vertically (the clock becomes two lines); on
    the top and bottom they sit in a row. Rotated text is unreadable at this size.
 
-`IdleHandleLayout` owns the arithmetic and is the single source of truth for the
+`HandleLayout` owns the arithmetic and is the single source of truth for the
 Handle's size — the real Panel and the Settings preview both go through it.
 
 ## Placement
@@ -48,10 +48,10 @@ Handle's size — the real Panel and the Settings preview both go through it.
   Named for the side of the *display*, not for the direction the Panel grows.
 - **Alignment** — where along the Edge the Panel sits, `0`…`1`. `0` is the top for the
   left and right Edges, the left for the top and bottom Edges.
-- **Placement** — an Edge plus an Alignment. `PanelPlacement.resolve` derives one from
+- **Placement** — an Edge plus an Alignment. `Placement::resolve` derives one from
   a pointer position; it is the single source of truth for drag-to-reposition.
 
-`ScreenEdge.growsHorizontally` is true for `leading` and `trailing`. It describes the
+`ScreenEdge::grows_horizontally` is true for `leading` and `trailing`. It describes the
 Panel's growth direction, not the orientation of the edge. Do not rename it to
 `isHorizontal` — that reading is backwards and has already caused one bug.
 
@@ -63,11 +63,18 @@ These are load-bearing, not preferences:
    buffer, and only grows to the full footprint while Open. An always-large transparent
    window would silently swallow every click aimed at the desktop behind it.
 2. **The window frame changes before the animation, never during it.** Opening sets the
-   full frame immediately (invisibly, since the window is transparent) and then animates
-   the SwiftUI content inside it. Animating the frame itself judders.
-3. **The Panel never activates the app on hover.** It is a `nonactivatingPanel`. It
-   takes focus only on an explicit hotkey, click, or tap — never because the pointer
-   passed over it.
+   full frame immediately (invisibly, since the window is transparent) and the frontend
+   then animates the shape inside it. Animating the frame itself judders.
+3. **Both states share one centre along the Edge.** Clamping the centre against the
+   Idle Handle's extent when closed and the open Panel's when open put them in
+   different places, so the Panel slid along its Edge as it opened. It grows in place.
+4. **The Panel never activates the app on hover.** It takes focus only on an explicit
+   hotkey, click, or tap — never because the pointer passed over it. Consequently it
+   cannot rely on the web view receiving pointer events, so hover is decided from the
+   cursor position in Rust rather than in the DOM.
+5. **The Panel is opaque.** A shaped window cannot sit on a real backdrop blur without
+   the blur showing as a rectangle behind the concave corners, and a translucent fill
+   with nothing behind it reads as a rendering fault rather than as depth.
 
 ## Widgets
 
@@ -78,7 +85,8 @@ about where the code lives:
   Clipboard.
 - **Custom Widget** — a folder the user dropped into the **Widgets Folder**
   (`~/Library/Application Support/Notchly/Widgets`). Contains a **Manifest**
-  (`widget.json`) and an HTML entry point. Loaded into a `WKWebView`. No recompiling.
+  (`widget.json`) and an HTML entry point. Loaded into a sandboxed iframe under its
+  own `widget://` origin. No recompiling.
 
 Both kinds are described by a **Widget Descriptor** — one uniform record carrying name,
 symbol, summary, declared settings, and requested permissions. Every piece of UI that
@@ -96,19 +104,22 @@ path to the settings UI.
 
 **The Bridge** is `window.notchly`, injected into every Custom Widget. Rules:
 
-1. Every Bridge call returns a promise, over `WKScriptMessageHandlerWithReply`. Never
-   hand-roll a request/response protocol on top of `postMessage`.
+1. Every Bridge call returns a promise. A widget posts to the host page, which checks
+   its permissions and forwards to Rust; the widget never sees that plumbing.
 2. **A permission the widget didn't declare, or the user didn't grant, rejects with a
    readable message.** It never returns empty data or fails silently — the widget author
    must be able to see why nothing happened.
 3. **Custom Widgets are offline until granted.** Network access is enforced with a
-   `WKContentRuleList`, not by asking politely.
+   a Content-Security-Policy served with every response, not by asking politely.
 4. **`WidgetPermission.requiresExplicitGrant` is the only list of what the user has to
    approve by hand** — currently `network`, `clipboard`, and `shell`. Enforcement, the
    Settings toggles, and a widget's lock badge all read that one property. When the
    three disagreed, clipboard history was readable by any widget that asked for it.
-5. Each Custom Widget gets its own `WKWebsiteDataStore` and its own key/value store, so
-   one widget cannot read another's state.
+6. **A Bridge call is attributed to whichever iframe sent it**, never to a widget id in
+   the message body — otherwise any widget could claim to be another and borrow its
+   permissions. Each Custom Widget has an opaque origin and its own key/value store, so
+   one cannot read another's state. Their *files* are not yet isolated; see
+   `docs/PORTING.md`.
 
 ## Sampling
 

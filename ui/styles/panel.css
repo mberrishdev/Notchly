@@ -1,0 +1,601 @@
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  color-scheme: dark;
+  --accent: #6e9bff;
+  --text: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.58);
+  --text-tertiary: rgba(255, 255, 255, 0.36);
+  --shell: #0b0c0f;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --caution: #ffc46b;
+  --danger: #ff6b6b;
+  --good: #7fd1ae;
+}
+
+/* Nothing may paint a background: the window is transparent and the SVG shape is the
+   only thing that should be visible. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+#outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+#shape {
+  fill: var(--shell);
+  filter: url(#panel-shadow);
+  transition: fill-opacity 0.2s ease;
+}
+
+#hairline {
+  fill: none;
+  stroke: var(--hairline-strong);
+  stroke-width: 0.75;
+}
+
+/* Spans the whole window so the clip path's user-space coordinates line up with the
+   SVG that defined it. */
+#clip-layer {
+  position: absolute;
+  inset: 0;
+  clip-path: url(#panel-clip);
+}
+
+#content {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Idle handle */
+.idle-handle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  opacity: 0.86;
+  transition: opacity 0.15s ease;
+}
+.idle-handle.stacked {
+  flex-direction: column;
+}
+body[data-hover="true"] .idle-handle {
+  opacity: 1;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  line-height: 1.05;
+}
+.chip.stacked {
+  flex-direction: column;
+  gap: 1px;
+}
+.chip .primary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chip-clock:not(.stacked) .primary {
+  font-size: 12px;
+}
+.chip .secondary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.chip .small {
+  font-size: 8px;
+}
+.chip .tertiary {
+  color: var(--text-tertiary);
+}
+.chip .glyph {
+  font-size: 9px;
+}
+.chip .value {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.chip.tone-caution .value,
+.chip.tone-caution .glyph {
+  color: var(--caution);
+}
+.chip.tone-danger .value,
+.chip.tone-danger .glyph {
+  color: var(--danger);
+}
+.chip.tone-good .value,
+.chip.tone-good .glyph {
+  color: var(--good);
+}
+.chip.tone-muted .value,
+.chip.tone-muted .glyph {
+  color: var(--text-tertiary);
+}
+
+.chip-icons {
+  display: flex;
+  gap: 7px;
+}
+.chip-icons.stacked {
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Three bars that animate only while something is actually playing — perpetual motion
+   in the corner of the eye is exhausting. */
+.chip-media {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+}
+.chip-media .bar {
+  width: 2px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--text-tertiary);
+}
+.chip-media .bar:nth-child(2) {
+  height: 7px;
+}
+.chip-media.playing .bar {
+  background: var(--accent);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+.chip-media.playing .bar:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.chip-media.playing .bar:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes pulse {
+  0%, 100% { height: 4px; }
+  50% { height: 11px; }
+}
+
+/* Open panel */
+#panel-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 14px;
+  box-sizing: border-box;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 9px;
+  border-bottom: 1px solid var(--hairline);
+}
+header .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+header .title {
+  font-size: 12px;
+  font-weight: 600;
+}
+header .spacer {
+  flex: 1;
+}
+header button {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: default;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+header button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+#drag-grip {
+  background: transparent;
+  cursor: grab;
+}
+#drag-grip:active {
+  cursor: grabbing;
+}
+
+#widget-stack {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#widget-stack::-webkit-scrollbar {
+  width: 0;
+}
+
+/* Widget cards */
+.card {
+  /* Flex items shrink by default once the stack overflows, which silently clipped
+     the bottom of every card. */
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.055);
+  border: 0.5px solid var(--hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: background 0.14s ease;
+}
+.card:hover {
+  background: rgba(255, 255, 255, 0.085);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px 8px;
+  border: 0;
+}
+.card-title {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  color: var(--text-tertiary);
+}
+.card-spacer {
+  flex: 1;
+}
+.accessory {
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+.card-action {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  cursor: default;
+  padding: 0 2px;
+}
+.card-action:hover {
+  color: var(--text);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.row.baseline {
+  align-items: baseline;
+}
+.label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.stat {
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.stat.big {
+  font-size: 15px;
+  font-weight: 600;
+}
+.stat.small {
+  font-size: 10px;
+}
+.stat.tiny {
+  font-size: 9.5px;
+}
+.muted {
+  color: var(--text-tertiary);
+}
+.tone-caution {
+  color: var(--caution);
+}
+.tone-danger {
+  color: var(--danger);
+}
+.tone-normal {
+  color: var(--text);
+}
+
+.section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  padding-top: 2px;
+}
+.process-name {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
+}
+
+.meter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.meter {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--good);
+  transition: width 0.45s ease-out;
+}
+.meter-fill.tone-caution {
+  background: var(--caution);
+}
+.meter-fill.tone-danger {
+  background: var(--danger);
+}
+.meter-fill.accent {
+  background: var(--accent);
+}
+
+.sparkline svg {
+  width: 100%;
+  height: 30px;
+  display: block;
+}
+.spark-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.spark-fill {
+  fill: var(--accent);
+  opacity: 0.16;
+  stroke: none;
+}
+
+.clock-body {
+  gap: 6px;
+}
+.clock-time {
+  font-size: 34px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.clock-suffix {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+.clock-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.clock-meta .muted {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+.media-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.media-artist {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.controls {
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+.transport {
+  appearance: none;
+  border: 0;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 11px;
+  cursor: default;
+}
+.transport:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.clip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 7px;
+  text-align: left;
+  color: var(--text);
+  cursor: default;
+}
+.clip-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.clip-row.copied {
+  background: rgba(110, 155, 255, 0.18);
+}
+.clip-kind {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  width: 12px;
+}
+.clip-text {
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  padding: 14px 0;
+  line-height: 1.6;
+}
+
+.card iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  transition: height 0.3s ease;
+}
+
+/* Launcher */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.75px solid var(--hairline);
+}
+.search-icon {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+#launcher-input {
+  flex: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+  user-select: text;
+}
+#launcher-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.launcher-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.launcher-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 7px;
+  text-align: left;
+  color: var(--text);
+  cursor: default;
+}
+.launcher-row:hover,
+.launcher-row.selected {
+  background: rgba(255, 255, 255, 0.1);
+}
+.launcher-initial {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.launcher-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chip glyphs are inline SVG so they stay crisp and don't depend on the system font
+   containing a suitable character. */
+.chip .glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.glyph-svg {
+  display: block;
+  color: inherit;
+}
+.chip-icons .glyph-svg {
+  opacity: 0.85;
+}

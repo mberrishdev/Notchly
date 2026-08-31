@@ -1,0 +1,28 @@
+/* Baseline so widgets sit on Notchly's card instead of a white page. Injected as the
+   first stylesheet, so any rule a widget writes overrides it. */
+html,
+body {
+  background: transparent !important;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  font: 13px var(--notchly-font, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif);
+  color: var(--notchly-text, rgba(255, 255, 255, 0.92));
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+a {
+  color: var(--notchly-accent, #6e9bff);
+}
+
+:focus-visible {
+  outline: 2px solid var(--notchly-accent, #6e9bff);
+  outline-offset: 2px;
+}

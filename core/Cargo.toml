@@ -1,0 +1,45 @@
+[package]
+name = "notchly"
+version = "0.1.0"
+description = "A notch-shaped panel that docks to any edge of your display."
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "notchly_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = "0.36.1"
+starship-battery = "0.10.2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-opener = "2.5.4"
+notify = "8.2.0"
+arboard = "3.6.1"
+tauri-plugin-notification = "2"
+# OS TLS rather than the default bundled rustls/aws-lc: schannel on Windows, Secure
+# Transport on macOS. It respects the system certificate store, and it avoids a C
+# dependency that cannot be cross-compiled from a Mac.
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+core-graphics = "0.24"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.61.3", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Media_Control", "Foundation"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

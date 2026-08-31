@@ -158,6 +158,12 @@ corner.
 
 ## Debugging
 
-Turn on the web inspector in Settings, then right-click a widget and choose *Inspect
-Element* for full Safari developer tools. `console.error` and uncaught errors are also
-mirrored into the per-widget log in Settings ▸ Custom Widgets.
+`console.error` and uncaught errors are mirrored into the per-widget log in
+Settings ▸ Custom Widgets, so you can debug without a console.
+
+## Isolation
+
+Your widget runs in a sandboxed iframe with an opaque origin. It cannot reach the host
+page, the Tauri bridge, or another widget's storage — everything it can do arrives
+through `window.notchly`, which checks your granted permissions first. Your widget's
+*files* are readable by other widgets; see `docs/PORTING.md`.
