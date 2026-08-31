@@ -53,7 +53,38 @@ jobs:
         with:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: Notchly ${{ github.event.inputs.version || github.ref_name }}
-          releaseBody: "See the assets below. Windows is unverified on hardware — see docs/PORTING.md."
+          releaseBody: |
+            A notch-shaped panel that docks to any edge of your display.
+
+            ### Which file do I want?
+
+            | Platform | Download |
+            | --- | --- |
+            | macOS, Apple Silicon | the `aarch64.dmg` |
+            | macOS, Intel | the `x64.dmg` |
+            | Windows | the `x64-setup.exe` |
+
+            Notchly has no Dock or taskbar icon. Look for the handle on the edge of
+            your display, or its icon in the menu bar / system tray.
+
+            ### Opening it the first time
+
+            These builds are not code-signed, so both systems will object.
+
+            **macOS** calls the app *damaged*, which is Gatekeeper's wording for
+            *not notarised*. Clear the quarantine flag:
+
+            ```bash
+            xattr -dr com.apple.quarantine /Applications/Notchly.app
+            ```
+
+            **Windows** shows *"Windows protected your PC"* — choose
+            **More info → Run anyway**.
+
+            ---
+
+            Releases are created as drafts. Replace this with the notes for the
+            version before publishing.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
