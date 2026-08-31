@@ -35,6 +35,17 @@ pub struct PanelState {
     /// The last snapshot emitted, so `get_state` never has to re-enumerate monitors —
     /// which can fail while the app is still starting up.
     pub last_snapshot: Option<PanelSnapshot>,
+    /// Discovered custom widgets, rescanned whenever the folder changes.
+    pub catalog: crate::widgets::Catalog,
+    /// Newest metrics sample, so a widget asking for stats gets an answer immediately.
+    pub last_metrics: Option<crate::services::metrics::MetricsSample>,
+    pub clipboard: Vec<crate::services::clipboard::Entry>,
+    /// Widgets mid-interaction — a focused field, an open menu — that the panel must
+    /// not slide shut underneath.
+    pub hold_open: std::collections::BTreeSet<String>,
+    pub widget_logs: std::collections::BTreeMap<String, Vec<String>>,
+    /// Bumped per widget to force its iframe to reload after a file change.
+    pub revisions: std::collections::HashMap<String, u64>,
 }
 
 impl PanelState {
@@ -46,6 +57,12 @@ impl PanelState {
             dragging: false,
             ambient: Default::default(),
             last_snapshot: None,
+            catalog: Default::default(),
+            last_metrics: None,
+            clipboard: crate::services::clipboard::load(),
+            hold_open: Default::default(),
+            widget_logs: Default::default(),
+            revisions: Default::default(),
         }
     }
 }
@@ -245,7 +262,7 @@ pub fn close(app: &AppHandle) {
         let generation_now = {
             let state = handle.state::<SharedPanel>();
             let guard = state.lock().unwrap();
-            if guard.expanded {
+            if guard.expanded || !guard.hold_open.is_empty() {
                 return;
             }
             guard.generation.load(Ordering::SeqCst)
@@ -308,4 +325,48 @@ pub fn drag_to_pointer(app: &AppHandle) {
         guard.expanded
     };
     refresh(app, expanded);
+}
+
+/// Widgets can ask the panel to stay open while they are mid-interaction. Without this
+/// a panel set to close on pointer-exit slides shut while someone is typing.
+pub fn set_hold_open(app: &AppHandle, owner: &str, hold: bool) {
+    with_state(app, |state| {
+        if hold {
+            state.hold_open.insert(owner.to_string());
+        } else {
+            state.hold_open.remove(owner);
+        }
+    });
+}
+
+pub fn holds_panel_open(app: &AppHandle) -> bool {
+    with_state(app, |state| !state.hold_open.is_empty()).unwrap_or(false)
+}
+
+/// Per-widget log, surfaced in Settings so authors can debug without a console.
+pub fn append_widget_log(app: &AppHandle, widget_id: &str, line: &str) {
+    with_state(app, |state| {
+        let entries = state.widget_logs.entry(widget_id.to_string()).or_default();
+        entries.push(line.to_string());
+        if entries.len() > 200 {
+            let excess = entries.len() - 200;
+            entries.drain(0..excess);
+        }
+    });
+}
+
+/// Rescans the widgets folder and tells the frontend what changed.
+pub fn rescan_widgets(app: &AppHandle) {
+    let revisions = with_state(app, |state| state.revisions.clone()).unwrap_or_default();
+    let catalog = crate::widgets::scan(&crate::settings::widgets_dir(), &revisions);
+    with_state(app, |state| state.catalog = catalog.clone());
+    let _ = app.emit("widgets", &catalog);
+}
+
+/// Marks a widget dirty so its iframe reloads on the next render.
+pub fn bump_revision(app: &AppHandle, widget_id: &str) {
+    with_state(app, |state| {
+        *state.revisions.entry(widget_id.to_string()).or_insert(0) += 1;
+    });
+    rescan_widgets(app);
 }

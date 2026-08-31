@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px; }
+
+    .head { display: flex; align-items: baseline; justify-content: space-between; }
+    .phase {
+      font-size: 9.5px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase;
+      color: var(--notchly-text-tertiary);
+    }
+    .rounds { font-size: 10px; color: var(--notchly-text-tertiary); font-variant-numeric: tabular-nums; }
+
+    .time {
+      font-size: 40px; font-weight: 200; letter-spacing: -0.02em; line-height: 1;
+      font-variant-numeric: tabular-nums; color: var(--notchly-text);
+    }
+    .time.break { color: #7FD1AE; }
+
+    .track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.09); overflow: hidden; }
+    .fill {
+      height: 100%; border-radius: 2px; background: var(--notchly-accent);
+      transition: width 0.4s ease-out;
+    }
+    .fill.break { background: #7FD1AE; }
+
+    .row { display: flex; gap: 6px; }
+    button {
+      appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600;
+      border-radius: 7px; padding: 6px 12px;
+      background: rgba(255,255,255,0.07); color: var(--notchly-text);
+      transition: background 0.12s, transform 0.08s;
+    }
+    button:hover { background: rgba(255,255,255,0.12); }
+    button:active { transform: scale(0.96); }
+    button.primary { background: var(--notchly-accent); color: #06070A; }
+    button.primary:hover { filter: brightness(1.08); }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <span class="phase" id="phase">Focus</span>
+    <span class="rounds" id="rounds">0 completed</span>
+  </div>
+  <div class="time" id="time">25:00</div>
+  <div class="track"><div class="fill" id="fill" style="width:0%"></div></div>
+  <div class="row">
+    <button class="primary" id="toggle">Start</button>
+    <button id="reset">Reset</button>
+    <button id="skip">Skip</button>
+  </div>
+
+  <script>
+    (async () => {
+      const el = (id) => document.getElementById(id);
+      const settings = await notchly.settings.all();
+      const focusSeconds = Math.round((settings.focusMinutes ?? 25) * 60);
+      const breakSeconds = Math.round((settings.breakMinutes ?? 5) * 60);
+
+      // The timer is stored as an end timestamp rather than a countdown, so it stays
+      // correct across panel closes, reloads, and app restarts.
+      let state = (await notchly.storage.get('state')) ?? {
+        phase: 'focus', endsAt: null, remaining: focusSeconds, rounds: 0
+      };
+
+      const total = () => (state.phase === 'focus' ? focusSeconds : breakSeconds);
+      const running = () => state.endsAt !== null;
+
+      function remaining() {
+        if (!running()) { return state.remaining; }
+        return Math.max(0, Math.round((state.endsAt - Date.now()) / 1000));
+      }
+
+      function save() { return notchly.storage.set('state', state); }
+
+      function render() {
+        const left = remaining();
+        const minutes = String(Math.floor(left / 60)).padStart(2, '0');
+        const seconds = String(left % 60).padStart(2, '0');
+        el('time').textContent = `${minutes}:${seconds}`;
+        el('time').className = 'time' + (state.phase === 'break' ? ' break' : '');
+        el('fill').className = 'fill' + (state.phase === 'break' ? ' break' : '');
+        el('fill').style.width = `${(1 - left / total()) * 100}%`;
+        el('phase').textContent = state.phase === 'focus' ? 'Focus' : 'Break';
+        el('rounds').textContent = `${state.rounds} completed`;
+        el('toggle').textContent = running() ? 'Pause' : 'Start';
+      }
+
+      async function advance() {
+        const finished = state.phase;
+        state.rounds += finished === 'focus' ? 1 : 0;
+        state.phase = finished === 'focus' ? 'break' : 'focus';
+        state.endsAt = null;
+        state.remaining = total();
+        await save();
+        render();
+        notchly.notify(
+          finished === 'focus' ? 'Focus block done' : 'Break over',
+          finished === 'focus' ? 'Take a break.' : 'Back to it.'
+        );
+      }
+
+      el('toggle').onclick = async () => {
+        if (running()) {
+          state.remaining = remaining();
+          state.endsAt = null;
+        } else {
+          state.endsAt = Date.now() + state.remaining * 1000;
+        }
+        await save();
+        render();
+      };
+
+      el('reset').onclick = async () => {
+        state.endsAt = null;
+        state.remaining = total();
+        await save();
+        render();
+      };
+
+      el('skip').onclick = advance;
+
+      render();
+      setInterval(() => {
+        if (running() && remaining() === 0) { advance(); return; }
+        render();
+      }, 500);
+    })();
+  </script>
+</body>
+</html>

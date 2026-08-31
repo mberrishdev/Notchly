@@ -13,6 +13,40 @@ use tauri::{AppHandle, Emitter};
 pub struct Ambient {
     sampler: Option<SamplerHandle>,
     running: Option<(Cadence, bool)>,
+    media: Option<MediaPoller>,
+    media_cadence: Option<Cadence>,
+}
+
+/// Now Playing is polled rather than pushed on macOS: reading it costs an `osascript`
+/// subprocess, so the ambient rate is deliberately lazy.
+pub struct MediaPoller {
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl MediaPoller {
+    fn spawn(app: AppHandle, cadence: Cadence) -> Self {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let stop = std::sync::Arc::new(AtomicBool::new(false));
+        let flag = stop.clone();
+        let interval = match cadence {
+            Cadence::Live => std::time::Duration::from_millis(1500),
+            Cadence::Ambient => std::time::Duration::from_secs(6),
+        };
+        std::thread::spawn(move || {
+            while !flag.load(Ordering::Relaxed) {
+                let payload = crate::services::media::now_playing();
+                let _ = app.emit("media", &payload);
+                std::thread::sleep(interval);
+            }
+        });
+        Self { stop }
+    }
+}
+
+impl Drop for MediaPoller {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 
 impl Ambient {
@@ -27,6 +61,19 @@ impl Ambient {
             None
         };
 
+        // Now Playing is wanted by the open panel and by the idle indicator chip.
+        let media_wanted = if expanded {
+            Some(Cadence::Live)
+        } else if settings.handle_chips.iter().any(|chip| chip.needs_media()) {
+            Some(Cadence::Ambient)
+        } else {
+            None
+        };
+        if media_wanted != self.media_cadence {
+            self.media_cadence = media_wanted;
+            self.media = media_wanted.map(|cadence| MediaPoller::spawn(app.clone(), cadence));
+        }
+
         if wanted == self.running {
             return;
         }
@@ -36,6 +83,7 @@ impl Ambient {
         let Some((cadence, want_processes)) = wanted else { return };
         let handle = app.clone();
         self.sampler = Some(SamplerHandle::spawn(cadence, want_processes, move |sample| {
+            crate::panel::with_state(&handle, |state| state.last_metrics = Some(sample.clone()));
             let _ = handle.emit("metrics", &sample);
         }));
     }
@@ -48,6 +96,7 @@ impl Ambient {
             let _ = sampler.sample(false);
             std::thread::sleep(std::time::Duration::from_millis(250));
             let sample: MetricsSample = sampler.sample(want_processes);
+            crate::panel::with_state(&handle, |state| state.last_metrics = Some(sample.clone()));
             let _ = handle.emit("metrics", &sample);
         });
     }

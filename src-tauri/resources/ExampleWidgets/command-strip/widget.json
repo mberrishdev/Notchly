@@ -1,0 +1,16 @@
+{
+  "id": "com.notchly.example.command-strip",
+  "name": "Command Strip",
+  "version": "1.0.0",
+  "author": "Notchly",
+  "description": "Runs short shell commands and shows their output. Needs shell permission.",
+  "entry": "index.html",
+  "icon": "terminal",
+  "height": 168,
+  "permissions": ["shell"],
+  "settings": [
+    { "key": "commands", "type": "string", "label": "Commands",
+      "default": "Uptime=uptime | Branch=git -C ~/Apps/notchly branch --show-current | Free space=df -h / | tail -1 | awk '{print $4}'",
+      "help": "Pipe-separated Label=command pairs." }
+  ]
+}

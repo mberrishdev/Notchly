@@ -21,6 +21,10 @@ starship-battery = "0.10.2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2.5.4"
+notify = "8.2.0"
+arboard = "3.6.1"
+tauri-plugin-notification = "2"
+reqwest = "0.13"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

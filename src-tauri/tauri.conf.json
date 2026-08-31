@@ -31,7 +31,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app"],
-    "icon": ["icons/icon.icns"]
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/icon.icns"
+    ],
+    "resources": {
+      "resources/ExampleWidgets": "ExampleWidgets"
+    }
   }
 }

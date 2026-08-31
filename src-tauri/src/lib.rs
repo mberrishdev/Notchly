@@ -1,14 +1,24 @@
+mod bridge;
 mod geometry;
 mod panel;
 mod platform;
 mod services;
 mod tray;
+mod widget_protocol;
+mod widgets;
 mod settings;
 
 use panel::{PanelSnapshot, PanelState, SharedPanel, PANEL_LABEL};
 use settings::Settings;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
+
+static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
+
+/// The running app, for the few services that have no handle of their own.
+pub fn app_handle() -> Option<AppHandle> {
+    APP.get().cloned()
+}
 
 #[tauri::command]
 fn get_state(app: AppHandle) -> Option<PanelSnapshot> {
@@ -95,6 +105,40 @@ fn window_report(app: AppHandle) -> serde_json::Value {
     }
 }
 
+#[tauri::command]
+async fn widget_invoke(
+    app: AppHandle,
+    widget_id: String,
+    method: String,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    bridge::dispatch(app, widget_id, method, params).await
+}
+
+#[tauri::command]
+fn list_widgets(app: AppHandle) -> widgets::Catalog {
+    panel::with_state(&app, |state| state.catalog.clone()).unwrap_or_default()
+}
+
+#[tauri::command]
+fn reload_widget(app: AppHandle, widget_id: String) {
+    panel::bump_revision(&app, &widget_id);
+}
+
+#[tauri::command]
+fn widget_log(app: AppHandle, widget_id: String) -> Vec<String> {
+    panel::with_state(&app, |state| {
+        state.widget_logs.get(&widget_id).cloned().unwrap_or_default()
+    })
+    .unwrap_or_default()
+}
+
+#[tauri::command]
+fn open_widgets_folder() {
+    let path = settings::widgets_dir().display().to_string();
+    let _ = tauri_plugin_opener::open_path(path, None::<&str>);
+}
+
 /// Menu bar actions. Kept beside the commands rather than in `tray` so every way of
 /// changing settings — menu, panel, or settings window — goes through one path.
 pub fn handle_tray_action(app: &AppHandle, id: &str) {
@@ -152,6 +196,12 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
+        // Widget files are served from here rather than the filesystem directly, so the
+        // runtime can be injected and a Content-Security-Policy applied per widget.
+        .register_uri_scheme_protocol("widget", |ctx, request| {
+            serve_widget(ctx.app_handle(), request)
+        })
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -178,7 +228,12 @@ pub fn run() {
             update_settings,
             window_report,
             capture_panel,
-            log_frontend
+            log_frontend,
+            widget_invoke,
+            list_widgets,
+            reload_widget,
+            widget_log,
+            open_widgets_folder
         ])
         .setup(move |app| {
             // Notchly is an accessory app: no Dock tile, just the panel.
@@ -191,6 +246,17 @@ pub fn run() {
             platform::configure_panel(&window);
 
             let handle = app.handle().clone();
+            let _ = APP.set(handle.clone());
+
+            // Bundled starter widgets, so the folder is never an empty void.
+            if let Ok(resources) = handle.path().resource_dir() {
+                widgets::seed_examples(&resources, &settings::widgets_dir());
+            }
+            panel::rescan_widgets(&handle);
+            start_widget_watcher(&handle);
+            let clipboard = crate::services::clipboard::Watcher::spawn(handle.clone());
+            std::mem::forget(clipboard);
+
             tray::build(&handle)?;
             register_hotkey(&handle, &hotkey);
             panel::refresh_when_ready(&handle, false);
@@ -249,4 +315,118 @@ fn register_hotkey(app: &AppHandle, hotkey: &settings::Hotkey) {
     if let Err(error) = manager.register(hotkey.accelerator.as_str()) {
         eprintln!("NOTCHLY-WARN hotkey {}: {error}", hotkey.accelerator);
     }
+}
+
+/// Serves `widget://localhost/<widget-id>/<path>`.
+fn serve_widget(
+    app: &AppHandle,
+    request: tauri::http::Request<Vec<u8>>,
+) -> tauri::http::Response<Vec<u8>> {
+    use tauri::http::{Response, StatusCode};
+
+    let not_found = || {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(b"not found".to_vec())
+            .expect("static response")
+    };
+
+    let Some((widget_id, relative)) = widget_protocol::split_request(request.uri().path()) else {
+        return not_found();
+    };
+    let Some(folder) = panel::with_state(app, |state| state.catalog.folder_for(&widget_id)).flatten()
+    else {
+        return not_found();
+    };
+    let Some(path) = widget_protocol::safe_join(&folder, &relative) else { return not_found() };
+    let Ok(bytes) = std::fs::read(&path) else { return not_found() };
+
+    let settings = panel::with_state(app, |state| state.settings.clone()).unwrap_or_default();
+    let declared: Vec<widgets::Permission> = panel::with_state(app, |state| {
+        state
+            .catalog
+            .package(&widget_id)
+            .and_then(|package| package.manifest.permissions.clone())
+            .unwrap_or_default()
+    })
+    .unwrap_or_default();
+    // Only permissions both declared *and* granted shape the policy.
+    let granted: Vec<widgets::Permission> = declared
+        .into_iter()
+        .filter(|permission| {
+            !permission.requires_explicit_grant()
+                || match permission {
+                    widgets::Permission::Network => &settings.network_approved_widgets,
+                    widgets::Permission::Shell => &settings.shell_approved_widgets,
+                    widgets::Permission::Clipboard => &settings.clipboard_approved_widgets,
+                    _ => &settings.network_approved_widgets,
+                }
+                .iter()
+                .any(|id| *id == widget_id)
+        })
+        .collect();
+
+    let content_type = widget_protocol::content_type(&path);
+    let body = if content_type.starts_with("text/html") {
+        let html = String::from_utf8_lossy(&bytes).to_string();
+        let widget_settings = serde_json::to_string(&bridge::widget_settings(app, &widget_id))
+            .unwrap_or_else(|_| "{}".into());
+        let theme = serde_json::to_string(&bridge::theme_payload(&settings))
+            .unwrap_or_else(|_| "{}".into());
+        widget_protocol::inject(&html, &widget_id, &widget_settings, &theme).into_bytes()
+    } else {
+        bytes
+    };
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", content_type)
+        .header("Content-Security-Policy", widget_protocol::csp(&granted))
+        .header("Cache-Control", "no-store")
+        .body(body)
+        .unwrap_or_else(|_| not_found())
+}
+
+/// Watches the widgets folder so saving a file reloads the widget in place.
+fn start_widget_watcher(app: &AppHandle) {
+    use notify::{RecursiveMode, Watcher};
+
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let Ok(mut watcher) = notify::recommended_watcher(tx) else { return };
+        if watcher
+            .watch(&settings::widgets_dir(), RecursiveMode::Recursive)
+            .is_err()
+        {
+            return;
+        }
+        loop {
+            // Editors save in bursts — write, rename, chmod — so coalesce them.
+            match rx.recv() {
+                Ok(Ok(_)) => {}
+                Ok(Err(_)) => continue,
+                Err(_) => return,
+            }
+            while rx.recv_timeout(std::time::Duration::from_millis(220)).is_ok() {}
+            let inner = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                let ids = panel::with_state(&inner, |state| {
+                    state
+                        .catalog
+                        .packages
+                        .iter()
+                        .map(|package| package.manifest.id.clone())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+                panel::with_state(&inner, |state| {
+                    for id in ids {
+                        *state.revisions.entry(id).or_insert(0) += 1;
+                    }
+                });
+                panel::rescan_widgets(&inner);
+            });
+        }
+    });
 }

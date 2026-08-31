@@ -1,11 +1,19 @@
 import { panel, listen, invoke } from "./lib/bridge.js";
 import { renderShape } from "./lib/panel-view.js";
 import { renderIdleHandle } from "./lib/idle-handle.js";
+import * as builtin from "./lib/builtin-widgets.js";
+import { createWidgetCard, startBridgeRelay, trackManifest, forgetFrames } from "./lib/widget-host.js";
 
 /** Latest state pushed from Rust. Rust owns the window; this owns what's drawn in it. */
 let current = null;
 /** Live values for the idle chips, refreshed only while something needs them. */
 let ambient = { metrics: {}, media: null, clipboardCount: 0, widgetIcons: [] };
+let catalog = { packages: [], failures: [] };
+let clipboard = [];
+let cpuHistory = new Array(48).fill(0);
+/// Web widget iframes are expensive to recreate, so the stack is only rebuilt when the
+/// set of widgets actually changes — not on every metrics tick.
+let stackSignature = "";
 
 let openTimer = null;
 let closeTimer = null;
@@ -32,11 +40,75 @@ function render() {
   if (metrics.expanded) {
     handle.hidden = true;
     body.hidden = false;
+    renderStack(settings);
   } else {
     body.hidden = true;
     handle.hidden = !metrics.showsContent;
     if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
   }
+}
+
+const BUILTIN_IDS = ["clock", "media", "system", "launcher", "clipboard"];
+
+function slotPrefs(settings, widgetId) {
+  return settings.slots.find((slot) => slot.widgetId === widgetId)?.preferences ?? {};
+}
+
+function renderStack(settings) {
+  const stack = document.getElementById("widget-stack");
+  const slots = settings.slots.filter((slot) => slot.isEnabled);
+  const signature = slots
+    .map((slot) => `${slot.widgetId}:${catalog.packages.find((p) => p.manifest.id === slot.widgetId)?.revision ?? 0}`)
+    .join("|");
+
+  if (signature !== stackSignature) {
+    stackSignature = signature;
+    stack.replaceChildren();
+    for (const slot of slots) {
+      const node = buildCard(slot, settings);
+      if (node) stack.append(node);
+    }
+    forgetFrames(stack);
+  } else {
+    // Same widgets, new numbers: refresh the built-ins in place.
+    for (const slot of slots) {
+      if (!BUILTIN_IDS.includes(slot.widgetId)) continue;
+      const existing = stack.querySelector(`[data-builtin="${slot.widgetId}"]`);
+      const replacement = buildCard(slot, settings);
+      if (existing && replacement) existing.replaceWith(replacement);
+    }
+  }
+}
+
+function buildCard(slot, settings) {
+  const prefs = slotPrefs(settings, slot.widgetId);
+  let node = null;
+  switch (slot.widgetId) {
+    case "clock":
+      node = builtin.clockWidget(prefs);
+      break;
+    case "system":
+      node = builtin.systemWidget(ambient.metrics ?? {}, cpuHistory, prefs);
+      break;
+    case "media":
+      node = builtin.mediaWidget(ambient.media);
+      break;
+    case "clipboard":
+      node = builtin.clipboardWidget(clipboard, prefs);
+      break;
+    case "launcher":
+      node = null;
+      break;
+    default: {
+      const pkg = catalog.packages.find((p) => p.manifest.id === slot.widgetId);
+      if (!pkg) return null;
+      const card = createWidgetCard(pkg, { onReload: (id) => invoke("reload_widget", { widgetId: id }) });
+      trackManifest(card, pkg.manifest);
+      return card;
+    }
+  }
+  if (node) node.dataset.builtin = slot.widgetId;
+  return node;
 }
 
 // Pointer handling. The window is exactly the panel plus its margin, so entering and
@@ -107,6 +179,27 @@ function wire() {
     if (event.key === "Escape") panel.close();
   });
 
+  // Transport buttons and clipboard rows are rebuilt constantly, so delegate.
+  document.getElementById("widget-stack").addEventListener("click", (event) => {
+    const transport = event.target.closest(".transport");
+    if (transport) {
+      invoke("widget_invoke", { widgetId: "media", method: transport.dataset.method, params: {} });
+      return;
+    }
+    const clip = event.target.closest(".clip-row");
+    if (clip) {
+      const entry = clipboard.find((item) => item.id === clip.dataset.clipId);
+      if (entry) {
+        invoke("widget_invoke", {
+          widgetId: "clipboard",
+          method: "clipboard.write",
+          params: { text: entry.text },
+        });
+        clip.classList.add("copied");
+      }
+    }
+  });
+
   document.getElementById("close-button").addEventListener("click", () => {
     hoverSuppressedUntil = Date.now() + 450;
     panel.close();
@@ -126,17 +219,36 @@ async function start() {
   });
   await listen("metrics", (event) => {
     ambient = { ...ambient, metrics: event.payload };
+    cpuHistory = [...cpuHistory.slice(1), event.payload.cpu ?? 0];
+    render();
+  });
+  await listen("media", (event) => {
+    ambient = { ...ambient, media: event.payload?.playing === false && !event.payload?.title ? null : event.payload };
+    render();
+  });
+  await listen("clipboard", (event) => {
+    clipboard = event.payload ?? [];
+    ambient = { ...ambient, clipboardCount: clipboard.length };
+    render();
+  });
+  await listen("widgets", (event) => {
+    catalog = event.payload ?? { packages: [], failures: [] };
+    stackSignature = "";
     render();
   });
 
   current = await panel.state();
+  catalog = (await invoke("list_widgets")) ?? { packages: [], failures: [] };
+  startBridgeRelay();
   render();
   wire();
 
   // The clock chip has no push source; a slow tick is cheaper than polling Rust.
   setInterval(() => {
-    if (current && !current.metrics.expanded && current.metrics.showsContent) render();
-  }, 10_000);
+    if (!current) return;
+    // The clock has no push source; a slow tick is cheaper than polling Rust.
+    if (current.metrics.expanded || current.metrics.showsContent) render();
+  }, 5_000);
 }
 
 // A frontend error would otherwise leave an empty transparent window, which is
