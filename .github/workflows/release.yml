@@ -46,15 +46,10 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signing. Without these the artefacts still build, but macOS shows
-          # "damaged, move to Bin" and Windows shows a SmartScreen warning.
-          # See docs/RELEASING.md.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Apple signing secrets are deliberately not declared here. tauri-action runs
+          # `security import` whenever they are present in the environment, and an
+          # unset secret is an empty string — which failed every macOS build. Add them
+          # back alongside a real certificate; see docs/RELEASING.md.
         with:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: Notchly ${{ github.event.inputs.version || github.ref_name }}

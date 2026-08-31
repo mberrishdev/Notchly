@@ -40,8 +40,11 @@ the app as *damaged and should be moved to the Bin*, which is Gatekeeper's misle
 phrasing for "not notarised". Users can bypass it with
 `xattr -dr com.apple.quarantine Notchly.app`, but that is not a distribution story.
 
-Proper signing needs an Apple Developer account (\$99/yr) and these repository secrets,
-which the release workflow already reads:
+Proper signing needs an Apple Developer account (\$99/yr) and these repository
+secrets. They are **not** declared in `release.yml`: tauri-action runs
+`security import` whenever they are present in the environment, and an unset secret is
+an empty string, which fails the build. Add the `env:` block back at the same time as
+the certificate.
 
 - `APPLE_CERTIFICATE` — base64 of a Developer ID Application `.p12`
 - `APPLE_CERTIFICATE_PASSWORD`
