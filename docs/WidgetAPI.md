@@ -166,4 +166,4 @@ Settings ▸ Custom Widgets, so you can debug without a console.
 Your widget runs in a sandboxed iframe with an opaque origin. It cannot reach the host
 page, the Tauri bridge, or another widget's storage — everything it can do arrives
 through `window.notchly`, which checks your granted permissions first. Your widget's
-*files* are readable by other widgets; see `docs/PORTING.md`.
+*files* are readable by other widgets; file-level isolation is not yet implemented.

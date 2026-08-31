@@ -118,8 +118,7 @@ path to the settings UI.
 6. **A Bridge call is attributed to whichever iframe sent it**, never to a widget id in
    the message body — otherwise any widget could claim to be another and borrow its
    permissions. Each Custom Widget has an opaque origin and its own key/value store, so
-   one cannot read another's state. Their *files* are not yet isolated; see
-   `docs/PORTING.md`.
+   one cannot read another's state. Their *files* are not yet isolated.
 
 ## Sampling
 

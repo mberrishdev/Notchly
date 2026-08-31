@@ -57,10 +57,12 @@ stands: shell access for widgets alone would fail review.
 
 ## Updates
 
-Not wired up. Tauri's updater plugin needs a signing keypair
-(`npx tauri signer generate`), the public key in `plugins.updater`, and a static JSON
-endpoint listing the latest version. Worth adding before there are users to update.
+The Settings window can check for and install updates through Tauri's updater. Releases
+must include updater metadata at the configured GitHub endpoint, and production bundles
+must be signed with the private key corresponding to the public key in
+`core/tauri.conf.json`. Generate a keypair with `npx tauri signer generate`; keep the
+private key outside the repository.
 
 ## iOS
 
-Not a target. See `docs/PORTING.md`.
+Not a target. See `CONTEXT.md` for the platform-independent domain model.

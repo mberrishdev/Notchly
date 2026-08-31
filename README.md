@@ -27,8 +27,8 @@ and it appears. Save a file, and it reloads. No recompiling, no signing, no SDK.
 
 ## Requirements
 
-- macOS. Windows is scaffolded but not yet implemented — see
-  [docs/PORTING.md](docs/PORTING.md)
+- macOS or Windows. Windows builds are available, but Windows runtime behavior still
+  needs validation on Windows hardware.
 - [Rust](https://rustup.rs) and Node, to build it
 
 ## Install
@@ -96,9 +96,8 @@ than polling for them.
 - **Choose what the handle shows** while closed — a line, the time, system readings,
   your widget icons, or any combination.
 - **Launch at login**, from the menu bar item or Settings ▸ General.
-- **Four edges**, any position along them, any size, and per-display pinning.
-- **Hover, click, or hotkey** to open — with the delays under your control, and a *keep
-  open* pin for when you want it to stay.
+- **Four edges**, any position along them, any size, and optional display selection.
+- **Hover, click, or hotkey** to open, with the delays under your control.
 - **Glass, tinted, or solid**, with your accent colour, and a live scale model of your
   display in Settings so you can see the shape as you dial it in.
 
@@ -140,9 +139,9 @@ first time the Now Playing widget looks at Music or Spotify.
 
 ## Contributing
 
-`CONTEXT.md` is the domain model and the terminology is binding. `CLAUDE.md` covers the
-layout and the decisions that aren't up for relitigating. `docs/PORTING.md` records what
-this was ported from and which gaps are still open.
+`CONTEXT.md` is the domain model and terminology source of truth. `CLAUDE.md` covers
+the repository layout and implementation decisions. See [docs/RELEASING.md](docs/RELEASING.md)
+for release instructions and [docs/WidgetAPI.md](docs/WidgetAPI.md) for widget development.
 
 ```bash
 cd core && cargo test    # 59 tests, headless

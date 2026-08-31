@@ -5,15 +5,15 @@ anyone drop in their own as a plain HTML/CSS/JS folder. Read `CONTEXT.md` first 
 the domain model and rulebook; its terminology is binding.
 
 Built with Tauri: a Rust core that owns the window and everything touching the system,
-and a plain HTML/CSS/JS frontend that draws the panel. `docs/PORTING.md` records what
-this replaced and why, including the gaps that are still open.
+and a plain HTML/CSS/JS frontend that draws the panel. `CONTEXT.md` is the single source
+of truth for the domain model and terminology.
 
 ## State of the repo
 
-Working end to end on macOS: the panel opens on hover, docks to all four edges, drags
+Working end to end on macOS, with Windows builds produced by CI: the panel opens on hover, docks to all four edges, drags
 to reposition, shows a configurable ambient strip while closed, hosts five built-in
 widgets plus any number of custom ones with hot reload, and has a five-pane settings
-window. Windows is scaffolded but not implemented — see `docs/PORTING.md`.
+window. Windows runtime behavior still needs validation on Windows hardware.
 
 59 Rust tests cover the notch geometry, window frames, drag placement, idle handle
 sizing, settings decoding, permission gating, the widget manifest format, the widget
