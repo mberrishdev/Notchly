@@ -248,11 +248,13 @@ pub fn close(app: &AppHandle) {
     };
     if let Some(display) = display_for(app, &settings) {
         let geometry = PanelGeometry::new(&settings, display.logical, settings.enabled_slot_count());
+        // The window is still open-sized until the collapse timer fires, so position
+        // the collapsed shape inside *that* window.
         let _ = app.emit(
             "panel-state",
             PanelSnapshot {
                 expanded: false,
-                metrics: geometry.metrics(false),
+                metrics: geometry.metrics_in(false, true),
                 settings,
             },
         );

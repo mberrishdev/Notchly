@@ -76,7 +76,7 @@ body {
   gap: 5px;
   width: 100%;
   height: 100%;
-  opacity: 0.82;
+  opacity: 0.86;
   transition: opacity 0.15s ease;
 }
 .idle-handle.stacked {
@@ -582,4 +582,20 @@ header button:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Chip glyphs are inline SVG so they stay crisp and don't depend on the system font
+   containing a suitable character. */
+.chip .glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.glyph-svg {
+  display: block;
+  color: inherit;
+}
+.chip-icons .glyph-svg {
+  opacity: 0.85;
 }

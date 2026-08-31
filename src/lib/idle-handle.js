@@ -6,6 +6,7 @@
 // rotated, because rotated text is unreadable at this size.
 
 import { growsHorizontally } from "./notch-shape.js";
+import { icons } from "./icons.js";
 
 const pad = (value) => String(value).padStart(2, "0");
 
@@ -51,8 +52,18 @@ function nowPlayingChip(media) {
   </div>`;
 }
 
-function widgetIconsChip(icons, stacked) {
-  const glyphs = icons.length ? icons : ["▫"];
+const WIDGET_GLYPHS = {
+  clock: icons.clock,
+  media: icons.charging,
+  system: icons.cpu,
+  launcher: icons.widget,
+  clipboard: icons.clipboard,
+};
+
+function widgetIconsChip(widgetIds, stacked) {
+  const glyphs = (widgetIds.length ? widgetIds : [null]).map(
+    (id) => WIDGET_GLYPHS[id] ?? icons.widget,
+  );
   return `<div class="chip chip-icons ${stacked ? "stacked" : ""}">
     ${glyphs.map((glyph) => `<span class="glyph">${glyph}</span>`).join("")}
   </div>`;
@@ -69,15 +80,15 @@ export function renderIdleHandle(container, settings, data) {
         case "date":
           return dateChip(stacked);
         case "cpu":
-          return readingChip("◉", percent(metrics.cpu), loadTone(metrics.cpu ?? 0), stacked);
+          return readingChip(icons.cpu, percent(metrics.cpu), loadTone(metrics.cpu ?? 0), stacked);
         case "memory":
-          return readingChip("▤", percent(metrics.memory), loadTone(metrics.memory ?? 0), stacked);
+          return readingChip(icons.memory, percent(metrics.memory), loadTone(metrics.memory ?? 0), stacked);
         case "battery":
           return batteryChip(metrics.battery, stacked);
         case "nowPlaying":
           return nowPlayingChip(data.media);
         case "clipboard":
-          return readingChip("❐", String(data.clipboardCount ?? 0), "normal", stacked);
+          return readingChip(icons.clipboard, String(data.clipboardCount ?? 0), "normal", stacked);
         case "widgetIcons":
           return widgetIconsChip(data.widgetIcons ?? [], stacked);
         default:
@@ -92,8 +103,8 @@ export function renderIdleHandle(container, settings, data) {
 
 function batteryChip(battery, stacked) {
   // A machine with no battery reads 0%, which must not be shown as critical.
-  if (!battery?.present) return readingChip("⏻", "AC", "muted", stacked);
+  if (!battery?.present) return readingChip(icons.power, "AC", "muted", stacked);
   const level = battery.level ?? 0;
   const tone = battery.charging ? "good" : level < 0.15 ? "danger" : level < 0.3 ? "caution" : "normal";
-  return readingChip(battery.charging ? "⚡" : "▮", percent(level), tone, stacked);
+  return readingChip(battery.charging ? icons.charging : icons.battery, percent(level), tone, stacked);
 }

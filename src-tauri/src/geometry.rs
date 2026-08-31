@@ -127,6 +127,13 @@ pub struct PanelMetrics {
     /// Offset of the shape inside the window, leaving room for the shadow.
     pub offset_x: f64,
     pub offset_y: f64,
+    /// Size of the window these offsets are relative to.
+    ///
+    /// During a close the window is still at its open size while the shape is already
+    /// collapsed, so the frontend cannot infer this from its own dimensions — it has
+    /// to be told which window the offsets belong to.
+    pub window_width: f64,
+    pub window_height: f64,
 }
 
 pub struct PanelGeometry {
@@ -245,7 +252,11 @@ impl PanelGeometry {
 
     /// What the frontend draws, in window-local coordinates.
     pub fn metrics(&self, expanded: bool) -> PanelMetrics {
-        let margin = self.margin(expanded);
+        self.metrics_in(expanded, expanded)
+    }
+
+    /// Metrics for `expanded`, positioned inside the window sized for `window_state`.
+    pub fn metrics_in(&self, expanded: bool, window_state: bool) -> PanelMetrics {
         let inverse = self.inverse_radius(expanded);
         let depth = self.depth(expanded);
         let extent = self.extent(expanded) + 2.0 * inverse;
@@ -255,12 +266,14 @@ impl PanelGeometry {
         } else {
             (extent, depth)
         };
-        // The shape hugs the docked edge; the margin sits on the inward side.
+
+        let window = self.window_frame(window_state);
+        // Hug the docked edge of whichever window is currently applied.
         let (offset_x, offset_y) = match self.edge {
-            ScreenEdge::Trailing => (margin, margin),
-            ScreenEdge::Leading => (0.0, margin),
-            ScreenEdge::Top => (margin, 0.0),
-            ScreenEdge::Bottom => (margin, margin),
+            ScreenEdge::Trailing => (window.width - shape_width, (window.height - shape_height) / 2.0),
+            ScreenEdge::Leading => (0.0, (window.height - shape_height) / 2.0),
+            ScreenEdge::Top => ((window.width - shape_width) / 2.0, 0.0),
+            ScreenEdge::Bottom => ((window.width - shape_width) / 2.0, window.height - shape_height),
         };
 
         PanelMetrics {
@@ -272,6 +285,8 @@ impl PanelGeometry {
             shows_content: expanded || self.handle.shows_content,
             offset_x,
             offset_y,
+            window_width: window.width,
+            window_height: window.height,
         }
     }
 }
@@ -417,11 +432,33 @@ mod tests {
     }
 
     #[test]
-    fn metrics_reserve_the_shadow_margin_on_the_inward_side_only() {
+    fn the_shape_hugs_the_docked_edge_of_its_window() {
+        for (edge, probe) in [
+            (ScreenEdge::Trailing, 0),
+            (ScreenEdge::Leading, 1),
+            (ScreenEdge::Top, 2),
+            (ScreenEdge::Bottom, 3),
+        ] {
+            let g = geometry(edge, 0.5);
+            let m = g.metrics(true);
+            match probe {
+                0 => assert!((m.offset_x + m.shape_width - m.window_width).abs() < 0.001),
+                1 => assert!(m.offset_x.abs() < 0.001),
+                2 => assert!(m.offset_y.abs() < 0.001),
+                _ => assert!((m.offset_y + m.shape_height - m.window_height).abs() < 0.001),
+            }
+        }
+    }
+
+    #[test]
+    fn a_collapsing_panel_is_positioned_in_the_window_it_is_still_in() {
+        // Mid-close the window has not shrunk yet, so the collapsed shape must be
+        // placed against the *open* window's edge or it visibly jumps.
         let g = geometry(ScreenEdge::Trailing, 0.5);
-        let open = g.metrics(true);
-        let frame = g.window_frame(true);
-        // Shape plus its offset must exactly fill the window on the docked axis.
-        assert!((open.offset_x + open.shape_width - frame.width).abs() < 0.001);
+        let during = g.metrics_in(false, true);
+        let after = g.metrics_in(false, false);
+        assert!((during.offset_x + during.shape_width - during.window_width).abs() < 0.001);
+        assert!(during.window_width > after.window_width);
+        assert_eq!(during.shape_width, after.shape_width);
     }
 }

@@ -131,6 +131,12 @@ NOTCHLY_CAPTURE_DIR=/tmp/shots \
   src-tauri/target/release/bundle/macos/Notchly.app/Contents/MacOS/notchly
 ```
 
+The capture harness only works while the window server is actually compositing the
+panel. Launched straight from the binary the app is never activated, WebKit reports
+`document.visibilityState === "hidden"`, and the capture comes back fully transparent
+even though the DOM is correct — so a blank PNG means "not composited", not "not
+rendered". Check `document.visibilityState` before believing an empty capture.
+
 Frontend errors are reported to stdout rather than swallowed. That matters more than
 usual here: a JS failure leaves an empty transparent window, which looks exactly like
 a transparency bug.

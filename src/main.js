@@ -34,20 +34,25 @@ const clearTimers = () => {
 function render() {
   if (!current) return;
   const { metrics, settings } = current;
-  renderShape(metrics, settings);
 
-  const handle = document.getElementById("idle-handle");
-  const body = document.getElementById("panel-body");
+  // The widget-icons chip draws one glyph per enabled widget.
+  ambient.widgetIcons = settings.slots.filter((slot) => slot.isEnabled).map((slot) => slot.widgetId);
 
-  if (metrics.expanded) {
-    handle.hidden = true;
-    body.hidden = false;
-    renderStack(settings);
-  } else {
-    body.hidden = true;
-    handle.hidden = !metrics.showsContent;
-    if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
-  }
+  const swapContent = () => {
+    const handle = document.getElementById("idle-handle");
+    const body = document.getElementById("panel-body");
+    if (metrics.expanded) {
+      handle.hidden = true;
+      body.hidden = false;
+      renderStack(settings);
+    } else {
+      body.hidden = true;
+      handle.hidden = !metrics.showsContent;
+      if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
+    }
+  };
+
+  renderShape(metrics, settings, swapContent);
 }
 
 const BUILTIN_IDS = ["clock", "media", "system", "launcher", "clipboard"];
