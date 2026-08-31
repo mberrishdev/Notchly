@@ -260,10 +260,15 @@ impl Default for Settings {
     }
 }
 
-/// `~/Library/Application Support/Notchly` and its Windows equivalent.
+/// Where settings, widgets and clipboard history live.
+///
+/// Deliberately *not* the Swift build's `Notchly` directory while both exist in the
+/// tree: the two write incompatible slot records (`widgetID` versus `widgetId`), so
+/// sharing a settings file means each silently resets the other's widget list. Rename
+/// this to `Notchly` once the Swift app is retired.
 pub fn support_dir() -> PathBuf {
     let base = dirs_next_config().unwrap_or_else(std::env::temp_dir);
-    let dir = base.join("Notchly");
+    let dir = base.join("Notchly (Tauri)");
     let _ = std::fs::create_dir_all(&dir);
     dir
 }

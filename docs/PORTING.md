@@ -104,6 +104,17 @@ Swift build and should be closed.
 **Not yet ported:** clipboard image capture, per-widget log UI, the web inspector
 toggle, and the settings-window preview of the panel.
 
+## Running it alongside the Swift build
+
+Both apps live in this tree and can run at once, but they must not share state: their
+slot records differ (`widgetID` versus `widgetId`), so a shared settings file means
+each silently resets the other's widget list. The Tauri build therefore uses
+`~/Library/Application Support/Notchly (Tauri)`. Rename it to `Notchly` in
+`settings.rs` once the Swift app is retired.
+
+Only run one at a time if you want to judge the panel — otherwise two panels dock to
+the same screen edge and overlap.
+
 ## Development
 
 ```bash
