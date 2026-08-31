@@ -6,6 +6,7 @@ mod panel;
 mod platform;
 mod services;
 mod tray;
+mod updates;
 mod widget_protocol;
 mod widgets;
 mod settings;
@@ -25,6 +26,21 @@ pub fn app_handle() -> Option<AppHandle> {
 #[tauri::command]
 fn get_state(app: AppHandle) -> Option<PanelSnapshot> {
     panel::with_state(&app, |state| state.last_snapshot.clone())?
+}
+
+#[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    updates::current_version(&app)
+}
+
+#[tauri::command]
+async fn check_update(app: AppHandle) -> updates::UpdateStatus {
+    updates::check(app).await
+}
+
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    updates::install(app).await
 }
 
 #[tauri::command]
@@ -258,6 +274,8 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         // Widget files are served from here rather than the filesystem directly, so the
         // runtime can be injected and a Content-Security-Policy applied per widget.
@@ -301,7 +319,10 @@ pub fn run() {
             open_settings,
             create_starter_widget,
             reinstall_examples,
-            reload_all_widgets
+            reload_all_widgets,
+            app_version,
+            check_update,
+            install_update
         ])
         .setup(move |app| {
             // Notchly is an accessory app: no Dock tile, just the panel.

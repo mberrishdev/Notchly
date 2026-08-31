@@ -320,7 +320,7 @@ export function aboutPane(ctx) {
   });
 
   const privacy = [
-    "Notchly makes one network request of its own: cover art from Spotify's CDN, and only while Spotify is playing.",
+    "Notchly makes no network requests of its own beyond checking for updates.",
     "Custom widgets are offline by default — network access is a per-widget switch.",
     "Shell access is off unless you turn it on for a specific widget.",
     "Clipboard history is stored unencrypted in Application Support.",
@@ -329,9 +329,79 @@ export function aboutPane(ctx) {
   return [
     group("Notchly", [
       el("div", "footnote", "A notch-shaped panel that docks to any edge of your display."),
-      el("div", "footnote", "Tauri build — see docs/PORTING.md for what differs from the Swift original."),
+      versionRow(),
     ]),
     group("Shortcuts", shortcuts),
     group("Privacy", privacy),
   ];
+}
+
+/**
+ * Version, and a check that reports what it found — including why it failed.
+ *
+ * A check that quietly says "up to date" when it could not reach the network is worse
+ * than no check at all, so the three outcomes are distinct.
+ */
+function versionRow() {
+  const wrap = el("div");
+  const status = el("div", "footnote", "");
+  const action = el("button", "action", "Check for Updates");
+  const version = el("div", "field");
+  version.append(el("div", "field-label", "Version"));
+  const control = el("div", "field-control");
+  control.append(el("span", "readout mono", "…"), action);
+  version.append(control);
+  wrap.append(version, status);
+
+  const readout = control.querySelector(".readout");
+  invoke("app_version").then((v) => {
+    readout.textContent = v;
+  });
+
+  let installing = false;
+  action.addEventListener("click", async () => {
+    if (installing) return;
+    action.disabled = true;
+    action.textContent = "Checking…";
+    status.textContent = "";
+
+    let result;
+    try {
+      result = await invoke("check_update");
+    } catch (error) {
+      result = { status: "failed", reason: String(error?.message ?? error) };
+    }
+
+    action.disabled = false;
+    if (result.status === "upToDate") {
+      action.textContent = "Check for Updates";
+      status.textContent = `Notchly ${result.version} is the latest version.`;
+      return;
+    }
+    if (result.status === "failed") {
+      action.textContent = "Check for Updates";
+      status.textContent = `Couldn't check for updates: ${result.reason}`;
+      return;
+    }
+
+    action.textContent = `Install ${result.version}`;
+    status.textContent = result.notes
+      ? `Version ${result.version} is available.\n${result.notes}`
+      : `Version ${result.version} is available. Notchly will restart to finish.`;
+    action.onclick = async () => {
+      installing = true;
+      action.disabled = true;
+      action.textContent = "Installing…";
+      try {
+        await invoke("install_update");
+      } catch (error) {
+        installing = false;
+        action.disabled = false;
+        action.textContent = `Install ${result.version}`;
+        status.textContent = `Update failed: ${String(error?.message ?? error)}`;
+      }
+    };
+  });
+
+  return wrap;
 }

@@ -43,6 +43,54 @@ jobs:
           workspaces: core
       - run: npm ci
 
+      - name: Generate release notes
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          tag_name="${{ github.event.inputs.version || github.ref_name }}"
+          latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n 1 || true)
+          previous_tag=$(git tag -l 'v*' --sort=-v:refname | grep -v "^${tag_name}$" | head -n 1 || true)
+
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "A notch-shaped panel that docks to any edge of your display." >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "### Changes" >> "$GITHUB_OUTPUT"
+          if [ -n "$previous_tag" ]; then
+            echo "" >> "$GITHUB_OUTPUT"
+            git log "${previous_tag}..HEAD" --pretty=format:'- %s' >> "$GITHUB_OUTPUT"
+          else
+            echo "- Initial public release." >> "$GITHUB_OUTPUT"
+          fi
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "### Which file do I want?" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "| Platform | Download |" >> "$GITHUB_OUTPUT"
+          echo "| --- | --- |" >> "$GITHUB_OUTPUT"
+          echo "| macOS, Apple Silicon | the \\`aarch64.dmg\\` |" >> "$GITHUB_OUTPUT"
+          echo "| macOS, Intel | the \\`x64.dmg\\` |" >> "$GITHUB_OUTPUT"
+          echo "| Windows | the \\`x64-setup.exe\\` |" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "Notchly has no Dock or taskbar icon. Look for the handle on the edge of" >> "$GITHUB_OUTPUT"
+          echo "your display, or its icon in the menu bar / system tray." >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "### Opening it the first time" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "These builds are not code-signed, so both systems will object." >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "**macOS** calls the app *damaged*, which is Gatekeeper's wording for" >> "$GITHUB_OUTPUT"
+          echo "*not notarised*. Clear the quarantine flag:" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "\`\`\`bash" >> "$GITHUB_OUTPUT"
+          echo "xattr -dr com.apple.quarantine /Applications/Notchly.app" >> "$GITHUB_OUTPUT"
+          echo "\`\`\`" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "**Windows** shows *\"Windows protected your PC\"* — choose" >> "$GITHUB_OUTPUT"
+          echo "**More info → Run anyway**." >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,37 +102,7 @@ jobs:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: Notchly ${{ github.event.inputs.version || github.ref_name }}
           releaseBody: |
-            A notch-shaped panel that docks to any edge of your display.
-
-            ### Which file do I want?
-
-            | Platform | Download |
-            | --- | --- |
-            | macOS, Apple Silicon | the `aarch64.dmg` |
-            | macOS, Intel | the `x64.dmg` |
-            | Windows | the `x64-setup.exe` |
-
-            Notchly has no Dock or taskbar icon. Look for the handle on the edge of
-            your display, or its icon in the menu bar / system tray.
-
-            ### Opening it the first time
-
-            These builds are not code-signed, so both systems will object.
-
-            **macOS** calls the app *damaged*, which is Gatekeeper's wording for
-            *not notarised*. Clear the quarantine flag:
-
-            ```bash
-            xattr -dr com.apple.quarantine /Applications/Notchly.app
-            ```
-
-            **Windows** shows *"Windows protected your PC"* — choose
-            **More info → Run anyway**.
-
-            ---
-
-            Releases are created as drafts. Replace this with the notes for the
-            version before publishing.
+            ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

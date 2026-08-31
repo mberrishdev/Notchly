@@ -28,6 +28,8 @@ tauri-plugin-notification = "2"
 # Transport on macOS. It respects the system certificate store, and it avoids a C
 # dependency that cannot be cross-compiled from a Mac.
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2"] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
