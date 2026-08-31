@@ -14,6 +14,8 @@ let cpuHistory = new Array(48).fill(0);
 /// Web widget iframes are expensive to recreate, so the stack is only rebuilt when the
 /// set of widgets actually changes — not on every metrics tick.
 let stackSignature = "";
+let launcherResults = [];
+let launcherSelection = 0;
 
 let openTimer = null;
 let closeTimer = null;
@@ -73,6 +75,8 @@ function renderStack(settings) {
     // Same widgets, new numbers: refresh the built-ins in place.
     for (const slot of slots) {
       if (!BUILTIN_IDS.includes(slot.widgetId)) continue;
+      // The launcher owns live input; rebuilding it would throw away what was typed.
+      if (slot.widgetId === "launcher") continue;
       const existing = stack.querySelector(`[data-builtin="${slot.widgetId}"]`);
       const replacement = buildCard(slot, settings);
       if (existing && replacement) existing.replaceWith(replacement);
@@ -97,7 +101,7 @@ function buildCard(slot, settings) {
       node = builtin.clipboardWidget(clipboard, prefs);
       break;
     case "launcher":
-      node = null;
+      node = builtin.launcherWidget();
       break;
     default: {
       const pkg = catalog.packages.find((p) => p.manifest.id === slot.widgetId);
@@ -169,6 +173,12 @@ function onMouseUp() {
   }
 }
 
+function launch(path) {
+  invoke("launch_app", { path });
+  invoke("widget_invoke", { widgetId: "launcher", method: "ui.holdOpen", params: { value: false } });
+  panel.close();
+}
+
 function wire() {
   document.addEventListener("mouseenter", pointerEntered);
   document.addEventListener("mouseleave", pointerLeft);
@@ -186,6 +196,11 @@ function wire() {
       invoke("widget_invoke", { widgetId: "media", method: transport.dataset.method, params: {} });
       return;
     }
+    const launcherRow = event.target.closest(".launcher-row");
+    if (launcherRow) {
+      launch(launcherRow.dataset.path);
+      return;
+    }
     const clip = event.target.closest(".clip-row");
     if (clip) {
       const entry = clipboard.find((item) => item.id === clip.dataset.clipId);
@@ -197,6 +212,39 @@ function wire() {
         });
         clip.classList.add("copied");
       }
+    }
+  });
+
+  const stack = document.getElementById("widget-stack");
+
+  stack.addEventListener("input", async (event) => {
+    if (event.target.id !== "launcher-input") return;
+    const query = event.target.value;
+    // Typing must keep the panel open even if the pointer has wandered off.
+    invoke("widget_invoke", {
+      widgetId: "launcher",
+      method: "ui.holdOpen",
+      params: { value: query.length > 0 },
+    });
+    launcherResults = query ? await invoke("search_apps", { query }) : [];
+    launcherSelection = 0;
+    const results = document.getElementById("launcher-results");
+    if (results) builtin.renderLauncherResults(results, launcherResults, launcherSelection);
+  });
+
+  stack.addEventListener("keydown", (event) => {
+    if (event.target.id !== "launcher-input") return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!launcherResults.length) return;
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      launcherSelection =
+        (launcherSelection + delta + launcherResults.length) % launcherResults.length;
+      const results = document.getElementById("launcher-results");
+      if (results) builtin.renderLauncherResults(results, launcherResults, launcherSelection);
+    } else if (event.key === "Enter") {
+      const app = launcherResults[launcherSelection];
+      if (app) launch(app.path);
     }
   });
 

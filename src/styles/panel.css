@@ -514,3 +514,72 @@ header button:hover {
   background: transparent;
   transition: height 0.3s ease;
 }
+
+/* Launcher */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.75px solid var(--hairline);
+}
+.search-icon {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+#launcher-input {
+  flex: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+  user-select: text;
+}
+#launcher-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.launcher-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.launcher-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 7px;
+  text-align: left;
+  color: var(--text);
+  cursor: default;
+}
+.launcher-row:hover,
+.launcher-row.selected {
+  background: rgba(255, 255, 255, 0.1);
+}
+.launcher-initial {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.launcher-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

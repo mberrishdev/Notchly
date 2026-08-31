@@ -255,3 +255,28 @@ function escapeHtml(text) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
   );
 }
+
+export function launcherWidget() {
+  const body = el("div", "card-body");
+  const field = el("div", "search-field");
+  field.innerHTML = `<span class="search-icon">⌕</span>
+    <input id="launcher-input" type="text" placeholder="Search apps" spellcheck="false" />`;
+  const results = el("div", "launcher-results");
+  results.id = "launcher-results";
+  body.append(field, results);
+  return card("LAUNCHER", body);
+}
+
+export function renderLauncherResults(container, apps, selected) {
+  container.replaceChildren();
+  if (!apps.length) return;
+  apps.forEach((app, index) => {
+    const row = el("button", `launcher-row${index === selected ? " selected" : ""}`);
+    row.dataset.path = app.path;
+    row.append(
+      el("span", "launcher-initial", app.name.charAt(0).toUpperCase()),
+      el("span", "launcher-name", app.name),
+    );
+    container.append(row);
+  });
+}

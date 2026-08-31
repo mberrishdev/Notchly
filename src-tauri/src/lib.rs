@@ -134,6 +134,17 @@ fn widget_log(app: AppHandle, widget_id: String) -> Vec<String> {
 }
 
 #[tauri::command]
+fn search_apps(app: AppHandle, query: String) -> Vec<services::apps::App> {
+    let apps = panel::with_state(&app, |state| state.apps.clone()).unwrap_or_default();
+    services::apps::rank(&query, &apps, 8).into_iter().cloned().collect()
+}
+
+#[tauri::command]
+fn launch_app(path: String) -> Result<(), String> {
+    services::apps::launch(std::path::Path::new(&path))
+}
+
+#[tauri::command]
 fn open_widgets_folder() {
     let path = settings::widgets_dir().display().to_string();
     let _ = tauri_plugin_opener::open_path(path, None::<&str>);
@@ -233,7 +244,9 @@ pub fn run() {
             list_widgets,
             reload_widget,
             widget_log,
-            open_widgets_folder
+            open_widgets_folder,
+            search_apps,
+            launch_app
         ])
         .setup(move |app| {
             // Notchly is an accessory app: no Dock tile, just the panel.
@@ -253,6 +266,13 @@ pub fn run() {
                 widgets::seed_examples(&resources, &settings::widgets_dir());
             }
             panel::rescan_widgets(&handle);
+
+            // Indexing applications touches the disk; keep it off the launch path.
+            let indexer = handle.clone();
+            std::thread::spawn(move || {
+                let apps = services::apps::scan();
+                panel::with_state(&indexer, |state| state.apps = apps);
+            });
             start_widget_watcher(&handle);
             let clipboard = crate::services::clipboard::Watcher::spawn(handle.clone());
             std::mem::forget(clipboard);

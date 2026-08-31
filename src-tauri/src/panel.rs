@@ -46,6 +46,8 @@ pub struct PanelState {
     pub widget_logs: std::collections::BTreeMap<String, Vec<String>>,
     /// Bumped per widget to force its iframe to reload after a file change.
     pub revisions: std::collections::HashMap<String, u64>,
+    /// Installed applications, indexed once in the background at launch.
+    pub apps: Vec<crate::services::apps::App>,
 }
 
 impl PanelState {
@@ -63,6 +65,7 @@ impl PanelState {
             hold_open: Default::default(),
             widget_logs: Default::default(),
             revisions: Default::default(),
+            apps: Vec::new(),
         }
     }
 }
