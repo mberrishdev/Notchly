@@ -207,23 +207,72 @@ mod imp {
 
 #[cfg(target_os = "windows")]
 mod imp {
+    use serde_json::json;
     use tauri::WebviewWindow;
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    };
 
-    pub fn configure_panel(_window: &WebviewWindow) {
-        // Phase 1: WS_EX_NOACTIVATE | WS_EX_TOPMOST via windows-rs.
+    /// Rebuilt from the raw pointer rather than passed through, so a version skew
+    /// between Tauri's `windows` crate and ours cannot turn into a type error.
+    fn hwnd(window: &WebviewWindow) -> Option<HWND> {
+        window.hwnd().ok().map(|handle| HWND(handle.0 as *mut _))
     }
 
-    pub fn describe_window(_window: &WebviewWindow) -> serde_json::Value {
-        serde_json::json!({ "platform": "windows", "transparencyLooksCorrect": null })
+    fn extended_style(handle: HWND) -> isize {
+        unsafe { GetWindowLongPtrW(handle, GWL_EXSTYLE) }
     }
+
+    pub fn configure_panel(window: &WebviewWindow) {
+        let Some(handle) = hwnd(window) else { return };
+        // NOACTIVATE is the counterpart of macOS's non-activating panel: clicking the
+        // panel must not pull focus off whatever the user is actually working in.
+        // TOOLWINDOW keeps it out of Alt-Tab, TOPMOST floats it above ordinary windows.
+        let wanted = extended_style(handle)
+            | WS_EX_NOACTIVATE.0 as isize
+            | WS_EX_TOPMOST.0 as isize
+            | WS_EX_TOOLWINDOW.0 as isize;
+        unsafe {
+            SetWindowLongPtrW(handle, GWL_EXSTYLE, wanted);
+            // The style change only takes effect once the window is re-positioned.
+            let _ = SetWindowPos(
+                handle,
+                Some(HWND_TOPMOST),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            );
+        }
+    }
+
+    pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
+        let Some(handle) = hwnd(window) else {
+            return json!({ "error": "no hwnd" });
+        };
+        let style = extended_style(handle);
+        let has = |flag: u32| style & flag as isize != 0;
+        json!({
+            "platform": "windows",
+            "noActivate": has(WS_EX_NOACTIVATE.0),
+            "topMost": has(WS_EX_TOPMOST.0),
+            "toolWindow": has(WS_EX_TOOLWINDOW.0),
+            // Transparency comes from the compositor rather than a window style, so
+            // there is nothing here to read back the way there is on macOS.
+            "transparencyLooksCorrect": serde_json::Value::Null,
+        })
+    }
+
     pub fn sample_transparency(_window: &WebviewWindow) -> serde_json::Value {
-        serde_json::json!({ "captured": false })
+        json!({ "captured": false, "reason": "window capture is implemented for macOS only" })
     }
 
     pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
-        serde_json::json!({ "error": "capture is macOS only" })
+        json!({ "error": "window capture is implemented for macOS only" })
     }
-
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

@@ -56,12 +56,19 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    // The app icon can't double as the tray icon: a template image keeps only the
-    // alpha channel, so the whole squircle plate renders as a solid blob. This is a
-    // mark drawn for 18pt, which is the height Tauri scales tray icons to.
+    // macOS: the app icon can't double as a tray icon, because a template image keeps
+    // only the alpha channel and the whole squircle plate would render as a solid blob.
+    // This is a mark drawn for 18pt, the height Tauri scales tray icons to.
+    #[cfg(target_os = "macos")]
+    let icon = tauri::include_image!("icons/menubar.png");
+    // Windows draws the bitmap as given rather than tinting it, so that same
+    // black-on-alpha mark would be invisible against a dark taskbar.
+    #[cfg(not(target_os = "macos"))]
+    let icon = tauri::include_image!("icons/32x32.png");
+
     TrayIconBuilder::with_id("notchly")
-        .icon(tauri::include_image!("icons/menubar.png"))
-        .icon_as_template(true)
+        .icon(icon)
+        .icon_as_template(cfg!(target_os = "macos"))
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {

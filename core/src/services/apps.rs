@@ -23,7 +23,7 @@ pub struct App {
 impl App {
     fn new(name: String, path: PathBuf) -> Self {
         let initials = name
-            .split(|c: char| c == ' ' || c == '-' || c == '_')
+            .split([' ', '-', '_'])
             .filter_map(|word| word.chars().next())
             .collect::<String>()
             .to_lowercase();

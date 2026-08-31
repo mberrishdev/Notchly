@@ -84,11 +84,19 @@ edge without a special case.
 
 Honest list of what the Swift build does that this one does not yet.
 
-**Windows is stubbed.** `platform.rs` has the module structure and macOS
-implementation; the Windows side needs `WS_EX_NOACTIVATE | WS_EX_TOPMOST` via
-`windows-rs`, and Now Playing wants
-`GlobalSystemMediaTransportControlsSessionManager` — a real public API, which will be
-better than the macOS AppleScript path it replaces.
+**Windows is written but unverified on hardware.** The window uses
+`WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW`, and Now Playing goes through
+`GlobalSystemMediaTransportControlsSession` — a real public API, so that side needs no
+subprocess, no scripting dialect and no permission prompt, and it reports whatever
+holds the media session rather than only two named apps.
+
+None of it has run on a Windows machine. It could not even be type-checked from the
+development Mac: `cargo check --target x86_64-pc-windows-msvc` gets as far as
+`tauri-winres`, which needs `llvm-rc`. CI on a `windows-latest` runner compiles and
+bundles it instead — that is what stands in for a compiler here, and it is the only
+thing that has looked at this code.
+
+Window *capture* stays macOS-only. It is a development aid, not a feature.
 
 **No real vibrancy.** The Swift build used `ultraThinMaterial`. A shaped transparent
 window can't sit on an `NSVisualEffectView` without the blur showing as a rectangle
@@ -118,6 +126,13 @@ each silently resets the other's widget list. The Tauri build therefore uses
 
 Only run one at a time if you want to judge the panel — otherwise two panels dock to
 the same screen edge and overlap.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs `cargo test` and `cargo clippy -D warnings` on both
+macOS and Windows, and builds a bundle on each. Windows has no other verification
+path from a macOS development machine, so a red build there is the only signal that
+the Windows implementation is wrong.
 
 ## Development
 

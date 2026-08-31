@@ -219,15 +219,15 @@ pub async fn dispatch(
 
         "media.now" => Ok(crate::services::media::now_playing()),
         "media.playPause" => {
-            crate::services::media::transport("playpause");
+            crate::services::media::transport(crate::services::media::Transport::PlayPause);
             Ok(json!(true))
         }
         "media.next" => {
-            crate::services::media::transport("next track");
+            crate::services::media::transport(crate::services::media::Transport::Next);
             Ok(json!(true))
         }
         "media.previous" => {
-            crate::services::media::transport("previous track");
+            crate::services::media::transport(crate::services::media::Transport::Previous);
             Ok(json!(true))
         }
 

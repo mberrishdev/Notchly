@@ -5,18 +5,26 @@
 //! event, which would stall whichever thread ran it.
 //!
 //! Windows has a real public API for this — `GlobalSystemMediaTransportControlsSession`
-//! — so the port gets to delete the ugliest code in the project. That lands with the
-//! Windows pass; until then it reports nothing rather than pretending.
+//! — so that side needs no subprocess, no scripting dialect, and no permission prompt.
 
 use serde_json::{json, Value};
+
+/// A transport command, named for what the user means rather than for how either
+/// platform happens to spell it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transport {
+    PlayPause,
+    Next,
+    Previous,
+}
 
 #[cfg(target_os = "macos")]
 const PLAYERS: [&str; 2] = ["Spotify", "Music"];
 
 /// Reads the current track. Returns `{ "playing": false }` when nothing is playing or
 /// the user hasn't granted Automation access.
+#[cfg(target_os = "macos")]
 pub fn now_playing() -> Value {
-    #[cfg(target_os = "macos")]
     {
         let mut paused: Option<Value> = None;
         for player in PLAYERS {
@@ -29,31 +37,26 @@ pub fn now_playing() -> Value {
         }
         paused.unwrap_or_else(|| json!({ "playing": false }))
     }
-    #[cfg(not(target_os = "macos"))]
-    {
-        json!({ "playing": false })
-    }
 }
 
-pub fn transport(verb: &str) {
-    #[cfg(target_os = "macos")]
-    {
-        // Send to whichever player is actually playing, so a paused Spotify in the
-        // background doesn't swallow a command meant for Music.
-        let target = PLAYERS.iter().find(|player| {
-            run_script(&format!(
-                "tell application \"{player}\"\n if it is running then return (player state as text)\n end if\n return \"none\"\nend tell"
-            ))
-            .map(|state| state.trim() == "playing")
-            .unwrap_or(false)
-        });
-        let player = target.copied().unwrap_or("Spotify");
-        let _ = run_script(&format!("tell application \"{player}\" to {verb}"));
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = verb;
-    }
+#[cfg(target_os = "macos")]
+pub fn transport(command: Transport) {
+    let verb = match command {
+        Transport::PlayPause => "playpause",
+        Transport::Next => "next track",
+        Transport::Previous => "previous track",
+    };
+    // Send to whichever player is actually playing, so a paused Spotify in the
+    // background doesn't swallow a command meant for Music.
+    let target = PLAYERS.iter().find(|player| {
+        run_script(&format!(
+            "tell application \"{player}\"\n if it is running then return (player state as text)\n end if\n return \"none\"\nend tell"
+        ))
+        .map(|state| state.trim() == "playing")
+        .unwrap_or(false)
+    });
+    let player = target.copied().unwrap_or("Spotify");
+    let _ = run_script(&format!("tell application \"{player}\" to {verb}"));
 }
 
 #[cfg(target_os = "macos")]
@@ -160,3 +163,95 @@ mod tests {
         assert!(parse("playing||A|B|1|0", "Music").is_none());
     }
 }
+
+/// Windows keeps a system-wide picture of what is playing, so unlike macOS there is no
+/// subprocess, no scripting dialect, and no per-application permission prompt. Whatever
+/// holds the media session answers — Spotify, a browser tab, anything.
+#[cfg(target_os = "windows")]
+mod win {
+    use super::Transport;
+    use serde_json::{json, Value};
+    use windows::Media::Control::{
+        GlobalSystemMediaTransportControlsSession as Session,
+        GlobalSystemMediaTransportControlsSessionManager as Manager,
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus as Status,
+    };
+
+    fn current_session() -> Option<Session> {
+        Manager::RequestAsync().ok()?.get().ok()?.GetCurrentSession().ok()
+    }
+
+    pub fn now_playing() -> Value {
+        let Some(session) = current_session() else {
+            return json!({ "playing": false });
+        };
+        let Ok(properties) = session.TryGetMediaPropertiesAsync().and_then(|op| op.get()) else {
+            return json!({ "playing": false });
+        };
+
+        let text = |value: windows::core::Result<windows::core::HSTRING>| {
+            value.map(|s| s.to_string()).unwrap_or_default()
+        };
+        let title = text(properties.Title());
+        if title.is_empty() {
+            return json!({ "playing": false });
+        }
+
+        let playing = session
+            .GetPlaybackInfo()
+            .and_then(|info| info.PlaybackStatus())
+            .map(|status| status == Status::Playing)
+            .unwrap_or(false);
+
+        // Timeline values are TimeSpans in 100-nanosecond ticks.
+        let seconds = |ticks: i64| ticks as f64 / 10_000_000.0;
+        let (duration, position) = session
+            .GetTimelineProperties()
+            .map(|timeline| {
+                let start = timeline.StartTime().map(|t| t.Duration).unwrap_or(0);
+                let end = timeline.EndTime().map(|t| t.Duration).unwrap_or(0);
+                let now = timeline.Position().map(|t| t.Duration).unwrap_or(0);
+                (seconds(end - start), seconds(now - start))
+            })
+            .unwrap_or((0.0, 0.0));
+
+        json!({
+            "playing": playing,
+            "title": title,
+            "artist": text(properties.Artist()),
+            "album": text(properties.AlbumTitle()),
+            "duration": duration.max(0.0),
+            "position": position.max(0.0),
+            "app": session.SourceAppUserModelId().map(|s| s.to_string()).unwrap_or_default(),
+        })
+    }
+
+    pub fn transport(command: Transport) {
+        let Some(session) = current_session() else { return };
+        // Fire and forget: the poll picks the new state up on its next tick.
+        let _ = match command {
+            Transport::PlayPause => session.TryTogglePlayPauseAsync().map(|_| ()),
+            Transport::Next => session.TrySkipNextAsync().map(|_| ()),
+            Transport::Previous => session.TrySkipPreviousAsync().map(|_| ()),
+        };
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub fn now_playing() -> Value {
+    win::now_playing()
+}
+
+#[cfg(target_os = "windows")]
+pub fn transport(command: Transport) {
+    win::transport(command)
+}
+
+/// Platforms with no media integration report nothing rather than pretending.
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn now_playing() -> Value {
+    json!({ "playing": false })
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn transport(_command: Transport) {}

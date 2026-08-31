@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main, tauri]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      # Linux would also need webkit2gtk; the app only targets macOS and Windows.
+      - name: Test
+        working-directory: core
+        run: cargo test --locked
+      - name: Lint
+        working-directory: core
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - run: npm ci
+      - name: Build bundle
+        run: npx tauri build --bundles ${{ runner.os == 'Windows' && 'nsis' || 'app' }}

@@ -24,12 +24,18 @@ tauri-plugin-opener = "2.5.4"
 notify = "8.2.0"
 arboard = "3.6.1"
 tauri-plugin-notification = "2"
-reqwest = "0.13"
+# OS TLS rather than the default bundled rustls/aws-lc: schannel on Windows, Secure
+# Transport on macOS. It respects the system certificate store, and it avoids a C
+# dependency that cannot be cross-compiled from a Mac.
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 core-graphics = "0.24"
 image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.61.3", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Media_Control", "Foundation"] }
 
 [profile.release]
 codegen-units = 1

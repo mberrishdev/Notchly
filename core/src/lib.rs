@@ -473,8 +473,7 @@ fn serve_widget(
                     widgets::Permission::Clipboard => &settings.clipboard_approved_widgets,
                     _ => &settings.network_approved_widgets,
                 }
-                .iter()
-                .any(|id| *id == widget_id)
+                .contains(&widget_id)
         })
         .collect();
 

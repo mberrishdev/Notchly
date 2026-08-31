@@ -162,7 +162,9 @@ fn d_handle_chips() -> Vec<IdleChip> {
 
 fn d_hotkey() -> Hotkey {
     Hotkey {
-        accelerator: "Alt+Cmd+N".into(),
+        // CmdOrControl resolves to Command on macOS and Control on Windows; a bare
+        // "Cmd" would fail to register on Windows.
+        accelerator: "CmdOrControl+Alt+N".into(),
         is_enabled: true,
     }
 }

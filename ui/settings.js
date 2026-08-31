@@ -137,11 +137,13 @@ function hotkeyRecorder() {
     event.preventDefault();
     event.stopPropagation();
     if (event.key === "Escape") return stop();
+    // Tauri accelerator names. "Super" is Command on macOS and the Windows key on
+    // Windows; "Cmd" would not parse on Windows.
     const parts = [];
-    if (event.ctrlKey) parts.push("Ctrl");
+    if (event.ctrlKey) parts.push("Control");
     if (event.altKey) parts.push("Alt");
     if (event.shiftKey) parts.push("Shift");
-    if (event.metaKey) parts.push("Cmd");
+    if (event.metaKey) parts.push("Super");
     const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
     if (["Control", "Alt", "Shift", "Meta"].includes(event.key)) return;
     // A bare key would fire constantly; require at least one modifier.

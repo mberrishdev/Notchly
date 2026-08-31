@@ -23,10 +23,9 @@ pub struct Entry {
 
 pub fn classify(text: &str) -> &'static str {
     let trimmed = text.trim();
-    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-        if !trimmed.contains(char::is_whitespace) {
-            return "url";
-        }
+    let is_link = trimmed.starts_with("http://") || trimmed.starts_with("https://");
+    if is_link && !trimmed.contains(char::is_whitespace) {
+        return "url";
     }
     if trimmed.len() == 7 && trimmed.starts_with('#') && trimmed[1..].chars().all(|c| c.is_ascii_hexdigit())
     {
