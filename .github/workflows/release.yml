@@ -1,6 +1,7 @@
 name: Release
 
-# Tag a commit to cut a release:  git tag v0.1.0 && git push origin v0.1.0
+# Tag a commit to cut a release:  git tag v0.3.0 && git push origin v0.3.0
+# Or run this workflow manually and enter the version in the Actions UI.
 on:
   push:
     tags: ["v*"]
@@ -32,6 +33,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -51,8 +54,18 @@ jobs:
           git fetch --tags --force
 
           tag_name="${{ github.event.inputs.version || github.ref_name }}"
-          latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n 1 || true)
-          previous_tag=$(git tag -l 'v*' --sort=-v:refname | grep -v "^${tag_name}$" | head -n 1 || true)
+          release_commit="HEAD"
+          if git rev-parse --verify --quiet "refs/tags/${tag_name}" >/dev/null; then
+            release_commit=$(git rev-list -n 1 "${tag_name}")
+          fi
+          previous_tag=$(git tag -l 'v*' --sort=-v:refname | awk -v current="${tag_name}" '$0 != current { print; exit }')
+          app_version=$(node -p "require('./core/tauri.conf.json').version")
+          expected_version="${tag_name#v}"
+          if [ "$app_version" != "$expected_version" ]; then
+            echo "Version mismatch: tag ${tag_name} but core/tauri.conf.json is ${app_version}" >&2
+            exit 1
+          fi
+          repo="${{ github.repository }}"
 
           echo "body<<EOF" >> "$GITHUB_OUTPUT"
           echo "A notch-shaped panel that docks to any edge of your display." >> "$GITHUB_OUTPUT"
@@ -60,18 +73,18 @@ jobs:
           echo "### Changes" >> "$GITHUB_OUTPUT"
           if [ -n "$previous_tag" ]; then
             echo "" >> "$GITHUB_OUTPUT"
-            git log "${previous_tag}..HEAD" --pretty=format:'- %s' >> "$GITHUB_OUTPUT"
+            git log "${previous_tag}..${release_commit}" --pretty=format:'- %s (%h)' >> "$GITHUB_OUTPUT"
           else
-            echo "- Initial public release." >> "$GITHUB_OUTPUT"
+            git log "${release_commit}" --pretty=format:'- %s (%h)' >> "$GITHUB_OUTPUT"
           fi
           echo "" >> "$GITHUB_OUTPUT"
           echo "### Which file do I want?" >> "$GITHUB_OUTPUT"
           echo "" >> "$GITHUB_OUTPUT"
           echo "| Platform | Download |" >> "$GITHUB_OUTPUT"
           echo "| --- | --- |" >> "$GITHUB_OUTPUT"
-          echo "| macOS, Apple Silicon | the \\`aarch64.dmg\\` |" >> "$GITHUB_OUTPUT"
-          echo "| macOS, Intel | the \\`x64.dmg\\` |" >> "$GITHUB_OUTPUT"
-          echo "| Windows | the \\`x64-setup.exe\\` |" >> "$GITHUB_OUTPUT"
+          echo "| macOS, Apple Silicon | [Download Apple Silicon DMG](https://github.com/${repo}/releases/download/${tag_name}/Notchly_${app_version}_aarch64.dmg) |" >> "$GITHUB_OUTPUT"
+          echo "| macOS, Intel | [Download Intel DMG](https://github.com/${repo}/releases/download/${tag_name}/Notchly_${app_version}_x64.dmg) |" >> "$GITHUB_OUTPUT"
+          echo "| Windows | [Download Windows installer](https://github.com/${repo}/releases/download/${tag_name}/Notchly_${app_version}_x64-setup.exe) |" >> "$GITHUB_OUTPUT"
           echo "" >> "$GITHUB_OUTPUT"
           echo "Notchly has no Dock or taskbar icon. Look for the handle on the edge of" >> "$GITHUB_OUTPUT"
           echo "your display, or its icon in the menu bar / system tray." >> "$GITHUB_OUTPUT"
