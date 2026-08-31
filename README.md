@@ -11,7 +11,7 @@ Dock it to any edge. Fill it with widgets.</p>
   <a href="https://github.com/mberrishdev/Notchly/releases/latest"><img src="https://img.shields.io/github/v/release/mberrishdev/Notchly?label=release&color=2f6feb" alt="Latest release" /></a>
   <a href="https://github.com/mberrishdev/Notchly/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mberrishdev/Notchly/ci.yml?label=CI&color=2da44e" alt="CI status" /></a>
   <img src="https://img.shields.io/badge/macOS-supported-24292f" alt="macOS supported" />
-  <img src="https://img.shields.io/badge/Windows-build%20available-24292f" alt="Windows build available" />
+  <img src="https://img.shields.io/badge/status-available-24292f?label=Windows&message=build%20available" alt="Windows build available" />
 </p>
 
 Notchly puts a small Handle on the edge of your screen. It opens into a full Panel for
