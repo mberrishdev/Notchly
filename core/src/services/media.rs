@@ -7,7 +7,7 @@
 //! Windows has a real public API for this — `GlobalSystemMediaTransportControlsSession`
 //! — so that side needs no subprocess, no scripting dialect, and no permission prompt.
 
-use serde_json::{json, Value};
+use serde_json::Value;
 
 /// A transport command, named for what the user means rather than for how either
 /// platform happens to spell it.
@@ -35,7 +35,7 @@ pub fn now_playing() -> Value {
             }
             paused.get_or_insert(track);
         }
-        paused.unwrap_or_else(|| json!({ "playing": false }))
+        paused.unwrap_or_else(|| serde_json::json!({ "playing": false }))
     }
 }
 
@@ -118,7 +118,7 @@ fn parse(output: &str, player: &str) -> Option<Value> {
     if player == "Spotify" && duration > 3600.0 {
         duration /= 1000.0;
     }
-    Some(json!({
+    Some(serde_json::json!({
         "playing": parts[0].to_lowercase().contains("playing"),
         "title": title,
         "artist": parts[2],
@@ -137,22 +137,22 @@ mod tests {
     #[test]
     fn parses_a_track_record() {
         let track = parse("playing|Song|Artist|Album|210.5|12.25", "Music").unwrap();
-        assert_eq!(track["playing"], json!(true));
-        assert_eq!(track["title"], json!("Song"));
-        assert_eq!(track["duration"], json!(210.5));
+        assert_eq!(track["playing"], serde_json::json!(true));
+        assert_eq!(track["title"], serde_json::json!("Song"));
+        assert_eq!(track["duration"], serde_json::json!(210.5));
     }
 
     #[test]
     fn converts_spotify_milliseconds_to_seconds() {
         let track = parse("playing|S|A|B|210500|10", "Spotify").unwrap();
-        assert_eq!(track["duration"], json!(210.5));
+        assert_eq!(track["duration"], serde_json::json!(210.5));
     }
 
     #[test]
     fn music_seconds_are_left_alone() {
         let track = parse("paused|S|A|B|210.5|10", "Music").unwrap();
-        assert_eq!(track["duration"], json!(210.5));
-        assert_eq!(track["playing"], json!(false));
+        assert_eq!(track["duration"], serde_json::json!(210.5));
+        assert_eq!(track["playing"], serde_json::json!(false));
     }
 
     #[test]
@@ -250,7 +250,7 @@ pub fn transport(command: Transport) {
 /// Platforms with no media integration report nothing rather than pretending.
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn now_playing() -> Value {
-    json!({ "playing": false })
+    serde_json::json!({ "playing": false })
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

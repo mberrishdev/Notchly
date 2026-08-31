@@ -326,9 +326,17 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
+    /// A fresh directory per test.
+    ///
+    /// Named from a counter rather than a timestamp: `Instant`'s Debug output contains
+    /// colons, which macOS accepts in a filename and Windows does not, so the original
+    /// version passed locally and failed every one of these tests on CI.
     fn temp() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("notchly-test-{}", std::process::id()));
-        let unique = dir.join(format!("{:?}", std::time::Instant::now()));
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let unique = std::env::temp_dir()
+            .join(format!("notchly-test-{}", std::process::id()))
+            .join(NEXT.fetch_add(1, Ordering::Relaxed).to_string());
         std::fs::create_dir_all(&unique).unwrap();
         unique
     }
