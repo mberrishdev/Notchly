@@ -11,7 +11,39 @@ import {
   el, field, toggle, slider, segmented, select, button, group,
 } from "./lib/settings-controls.js";
 
-let settings = null;
+function fallbackSettings() {
+  return {
+    edge: "trailing",
+    alignment: 0.42,
+    preferredScreen: null,
+    edgeInset: 0,
+    activation: "hover",
+    openDelay: 0.14,
+    closeDelay: 0.42,
+    closeOnOutsideClick: true,
+    isPinned: false,
+    hotkey: { accelerator: "", isEnabled: false },
+    material: "solid",
+    opacity: 0.96,
+    accentHex: "#6E9BFF",
+    panelWidth: 372,
+    panelHeight: 540,
+    cornerRadius: 26,
+    showsHandleWhenIdle: true,
+    reduceMotion: false,
+    handleChips: ["clock"],
+    handleThickness: 5,
+    handleLength: 108,
+    handleContentThickness: 30,
+    slots: [],
+    shellApprovedWidgets: [],
+    networkApprovedWidgets: [],
+    clipboardApprovedWidgets: [],
+    clipboardHistoryLimit: 120,
+  };
+}
+
+let settings = fallbackSettings();
 let catalog = { packages: [], failures: [] };
 let builtins = [];
 let displays = [];
@@ -421,20 +453,25 @@ async function start() {
     });
   }
 
-  const state = await invoke("get_state");
-  settings = state.settings;
-  [catalog, builtins, displays] = await Promise.all([
+  const state = await invoke("get_state").catch(() => null);
+  settings = state?.settings ?? fallbackSettings();
+
+  const results = await Promise.allSettled([
     invoke("list_widgets"),
     invoke("builtin_widgets"),
     invoke("list_displays"),
   ]);
 
+  catalog = results[0].status === "fulfilled" ? (results[0].value ?? { packages: [], failures: [] }) : { packages: [], failures: [] };
+  builtins = results[1].status === "fulfilled" ? (results[1].value ?? []) : [];
+  displays = results[2].status === "fulfilled" ? (results[2].value ?? []) : [];
+
   await listen("panel-state", (event) => {
-    settings = event.payload.settings;
+    settings = event.payload?.settings ?? settings;
     render();
   });
   await listen("widgets", (event) => {
-    catalog = event.payload;
+    catalog = event.payload ?? { packages: [], failures: [] };
     render();
   });
 
