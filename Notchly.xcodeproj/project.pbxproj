@@ -1,0 +1,902 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		013A1833DCB8E8FA23C4BBCE /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565B76A31C85D454917C710D /* PanelController.swift */; };
+		023C859C568227F55F6868C6 /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74E4D96A25B32C343AB20097 /* Format.swift */; };
+		087F6CA7FB4DFF84EB606F02 /* MissingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18DC3FA7521C4CF6F66BA644 /* MissingWidgetView.swift */; };
+		09CE1BA63D937392648E550C /* APIReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1141F214C482B5BE5D34D1C /* APIReference.swift */; };
+		0A03542217A8560A2CF6899C /* WidgetCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86DD38271A6584143639571 /* WidgetCard.swift */; };
+		19589077DD4CAFBA81DAE909 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BF13B0135183ABE2E44BB5 /* AppPaths.swift */; };
+		1C71D1367E5F29421EAF40C8 /* WebWidgetContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468DD26191BC60D92BAEADC0 /* WebWidgetContainer.swift */; };
+		1D7983F475CA38DEAA4A1496 /* ExampleWidgets in Resources */ = {isa = PBXBuildFile; fileRef = 6D00DDB2507B2C2D4CCDC73A /* ExampleWidgets */; };
+		1DC1A5453DD147365365FC68 /* SlotDropDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0949E8110C2C17D308BFD5 /* SlotDropDelegate.swift */; };
+		23E7085692BF52E043BA5263 /* NotchlyNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3019CB82BD7F03EEECD2346E /* NotchlyNotifications.swift */; };
+		27C373A2AFE78404996D803D /* AppSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179C2888774180F845FDA677 /* AppSearchTests.swift */; };
+		2881A8276F1908FEC30611D8 /* SystemWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 652F292018CADD6BF5E1C6F7 /* SystemWidget.swift */; };
+		28AE518F3104D0F119771441 /* AppCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DF8D48C843A28BE8BBF6A01 /* AppCatalog.swift */; };
+		2AE9111309EC4F3E73B28C95 /* SettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D583DADB7918A03DF3CB8F4 /* SettingsSection.swift */; };
+		2C22705BCB71E67BCF277053 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C916B43DC313366A32D83D9 /* NowPlaying.swift */; };
+		2C2C1E0E860D9F389D689679 /* IdleHandleLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57D7B3BEF71A18AF94F7DFC /* IdleHandleLayoutTests.swift */; };
+		2FE2BBA6A204CE84F168A6B3 /* MediaKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A1F3E7D26DBE094EB324E1 /* MediaKey.swift */; };
+		30A00914F88379EFF36BBDE4 /* MediaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EA1EC03526F689F83428F5 /* MediaWidget.swift */; };
+		31C01DB18587A357A6C44D33 /* WebWidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 135D8BC8939CA3B1517F6392 /* WebWidgetBridge.swift */; };
+		3231E253191C782E1E8654D7 /* SystemSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C85F8443A4C54DFBB2121CC /* SystemSamples.swift */; };
+		33CBBDDBF5506AEA879E7B0B /* WebWidgetRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF4558FF0521CB5EC147D0B4 /* WebWidgetRuntime.swift */; };
+		34FE6E1729369F098AF23DDB /* ClipboardWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78BF619F3DFD2AA826E54E0F /* ClipboardWidget.swift */; };
+		36129D2AD958408BF4F6359F /* MediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D505EE98DD8655A6C3A027 /* MediaController.swift */; };
+		3BBC029E3330FF7FA987FF02 /* PanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0521CBDD3D10F407D26D08F /* PanelPlacementTests.swift */; };
+		3E5757CDB90DC1760506FBB4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B194A822E25CB06D20C6E44 /* main.swift */; };
+		40DC21E762A1246455178400 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D14F0E5B05D9CAECB90597CE /* Theme.swift */; };
+		40DD65B4EDE1EDE26F29E2F0 /* FormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83B8070BD0D63966F8FDBAB /* FormatTests.swift */; };
+		42D0CDFFAC98B8C7EB2A5765 /* HandleRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD804F858048013E7B127C2 /* HandleRenderer.swift */; };
+		46A012671AB900F420299305 /* PanelRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7401D8D2A635C765A94ABEAC /* PanelRootView.swift */; };
+		47AC5164A0C189BF3C67CAD9 /* ClockWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964AAA98AEDAC39579EAF5C3 /* ClockWidget.swift */; };
+		482260674D24A2465C0DBFF7 /* AppearanceSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C8D602F74FC2C5046D1414 /* AppearanceSettingsPane.swift */; };
+		49595F87B36DD78CBAE20A57 /* HoverRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4672C341715604F63BE3FDEC /* HoverRow.swift */; };
+		4BEAA278E385D5621FCCB2F5 /* WidgetPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D282FCDADA8764FB4EA9C6 /* WidgetPermissionTests.swift */; };
+		4C6D31075B0FBF9456BDA3F5 /* MenuRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CB12EDA37C17B2CAB27B01 /* MenuRefresher.swift */; };
+		4D9B700F570A644D4623DE94 /* NSImage+PNG.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25D0B82E3E22F2A42B266B49 /* NSImage+PNG.swift */; };
+		4DC5AB0AD9AF93D3251292D2 /* StatRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AD4AF47ED6104AB33ACDF8 /* StatRow.swift */; };
+		5623094325098CB2008B60E3 /* WebWidgetPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D2234A37061F33FE931BD2 /* WebWidgetPackage.swift */; };
+		5916A678123D82BFAB8F0ED3 /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A844B1EE6AB29CEB6AD0DFEE /* JSONValue.swift */; };
+		5F2A44CDBA4988C9450C044A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F7499AD90046A08ADA104F /* SettingsView.swift */; };
+		5FA626FA6C5D2EED0F2C4025 /* WidgetSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F4934CAD8BB1FBC4DEA0172 /* WidgetSlot.swift */; };
+		61AFE312289D1D40BBD3B1E9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0C3BE90A1FBC6800DD43CA /* AppDelegate.swift */; };
+		63627B828764B55E547726EC /* LoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A23E5AAC629568F980C2380 /* LoginItemManager.swift */; };
+		63965CB34E52ABCB5FA60480 /* WidgetPermissionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA8699797C1B5613706BDA58 /* WidgetPermissionList.swift */; };
+		64BEBEB2425D890C8FB0D574 /* CustomWidgetPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A8ED29A227F801BE652A9D /* CustomWidgetPane.swift */; };
+		67E47C5BF104209C63730E37 /* IdleHandleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F232AD755A3B0C3F1A38AD3 /* IdleHandleSection.swift */; };
+		6953DD40F9F06F5CAD9E472E /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E02F42CD864148701249B61 /* SettingsWindowController.swift */; };
+		699F6068C23BDB787FB7DE28 /* IdleChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4F3C19B79024FF89059FB7 /* IdleChip.swift */; };
+		70E4EBC98DC02C7E8A2DBCA5 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF5FA80BED6AA0859C8610C7 /* ClipboardItem.swift */; };
+		736BEE896AA09FE7E477B273 /* FlowRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3264780E41B33CD3B70BF416 /* FlowRow.swift */; };
+		739FF7BE56D5BAD94A9BF150 /* NotchlySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE27035521F879F2EB96DBDC /* NotchlySettings.swift */; };
+		760AEF7195C538B82D325542 /* WidgetPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 790B4786A905BFD855E8CD95 /* WidgetPermission.swift */; };
+		7693E7D81F0110149E21234C /* ScreenEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 015649A0EE72D6AF5804A63E /* ScreenEdge.swift */; };
+		7AEEBF9B1AF9630EB1CFE584 /* MarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A318A4830706026EC506781 /* MarqueeText.swift */; };
+		81A8134AC9C4EB929D4B9644 /* PanelGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9133685F8FF355EAEF2CE665 /* PanelGeometry.swift */; };
+		81DBE2E282F4446464A40CD0 /* PanelContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E6B033B89A22048A9FDEF1 /* PanelContentView.swift */; };
+		828E5BF7F8072398A3B8DF69 /* HotKeyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB52149BA0B14A85B7EC5899 /* HotKeyFormatter.swift */; };
+		829F9A8E45C6D29920A57AD2 /* HotKeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B06F8C6A481D46F5DF5111 /* HotKeyRecorder.swift */; };
+		85732952E5610B0C6914F9FE /* TrackingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30792A230ACD6AA77A2C4B9B /* TrackingContainerView.swift */; };
+		8713BA5FE53EF3A00D4CD91A /* WidgetRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB5635A0E26A07E344B7D9A4 /* WidgetRegistry.swift */; };
+		8D47278828AF87B221BF94D1 /* AppleScriptRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE0BC807367ECCF79255CB9 /* AppleScriptRunner.swift */; };
+		8EE164F6DB7699538DC907A9 /* WebWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682DEBDBB5703D3CC6255847 /* WebWidgetStore.swift */; };
+		8F458516D5A96E32C3C2EE54 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B9F8461B26DD14BFDB8D3F /* SettingsTab.swift */; };
+		92420EC012FAB378F440432D /* PanelGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35946585B56AB9C4281B3813 /* PanelGeometryTests.swift */; };
+		99BDA241D68594D1BB0C2CC0 /* WebWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED739B5A3C1D7FC4E329DC59 /* WebWidgetView.swift */; };
+		9B342D24D911955DEE44F06E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F7F1219ADBBA1D4AD10792EE /* Assets.xcassets */; };
+		9D24E89F04AD54FB838FBBEB /* NotchShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E9A77ACCBD6710FD7717D0 /* NotchShape.swift */; };
+		9D6AB43AFF39C72EC862D7E8 /* WidgetDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD05355D1F06EAB47E391561 /* WidgetDescriptor.swift */; };
+		9F3981BA8C899C64154930E8 /* NotchShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD163CFC59E2A2F667DF48D7 /* NotchShapeTests.swift */; };
+		A0A1ACA48465C36B64BBF6CF /* PanelPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E4D84B6122089A39375A87 /* PanelPreview.swift */; };
+		A18595F8AA88DF48510AC0A8 /* Notifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D4BACD401DA35E0BC9C7E7 /* Notifier.swift */; };
+		A452966F4007240E3F0A77D6 /* WebWidgetManifestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E624C5B7EC9355A9D5070D57 /* WebWidgetManifestTests.swift */; };
+		AA70E7A284DBA574763FCFE6 /* IconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B23A4B815D01DF3DF10D48B /* IconButton.swift */; };
+		B07B01C36110EBDDBE22E098 /* HotkeySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E6BA953EE38D1B2D22ECCA /* HotkeySpec.swift */; };
+		B83FEFA1A376C376E88874DA /* WidgetPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020AE0767D79CFB9A68B0F85 /* WidgetPreferences.swift */; };
+		B954B233ECDC1B241D27D47B /* PinnedAppTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A42BA12BD31A3F655F5A8AD /* PinnedAppTile.swift */; };
+		BB29FA7CD901500F2FB3E297 /* IdleHandleLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4E333D0B9B399CA306EFA0 /* IdleHandleLayout.swift */; };
+		BC722E3DE448D207F83A5D70 /* GeneralSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A19D876177F8C24D73FD7F /* GeneralSettingsPane.swift */; };
+		C20F0F1F10FB838A4DD96C2B /* PanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35788A2FCD486854BB2EA458 /* PanelPlacement.swift */; };
+		C6CEFBC46772E51AF6E1C361 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49697A6A9168B05002565F7F /* AppEnvironment.swift */; };
+		CACCC2E347A6B96A5DBD2398 /* PanelSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A7C03624AF23413F43EA7D /* PanelSearchField.swift */; };
+		CE779AA607FEC6FD6BEAB595 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC538F87532A1301C1FEE98 /* Color+Hex.swift */; };
+		D32FB8AF2466D86426F44642 /* IdleHandleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875C572C54D9DCADC669A262 /* IdleHandleView.swift */; };
+		D654F1DDD06B103214B60E42 /* JSONValueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2A5E57A4926032E4FA9A39 /* JSONValueTests.swift */; };
+		D7DB83D199318F1C34C838E2 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7415F4406AFBABAE159EF32 /* SettingsStore.swift */; };
+		DA96DD1E6DBF663FC0FBF68E /* Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209F93B0FAEA0059C85BC70B /* Charts.swift */; };
+		DBA854C7CB1DB265DC9F6AC4 /* HotKeyCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732FE97B0EBFE8B55E74572C /* HotKeyCenter.swift */; };
+		DE3207913F0D847D1C006734 /* LauncherWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E05E2E7CF21F8074A14CEAB /* LauncherWidget.swift */; };
+		E01451CD71707C206D87A004 /* WidgetSettingField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C4D4A26CFE5F12E94A4E90 /* WidgetSettingField.swift */; };
+		E070BC09453DA7B2E9DC71D2 /* LaunchableApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E763A93BD8C65D88E4E4FA7C /* LaunchableApp.swift */; };
+		E73DAC8784687BDFC79A9885 /* WidgetSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66F0C9FECF480C7C347E221 /* WidgetSettingsPane.swift */; };
+		E8E3F26D5E2A39428D1830F4 /* WidgetSettingsForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 497E3FD84F78098598730F02 /* WidgetSettingsForm.swift */; };
+		E9D491255C8C8BF82393D104 /* WebWidgetManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA3D32A773F7BB65FFEA57F /* WebWidgetManifest.swift */; };
+		EBF4BC64A709A074F76A26D9 /* SettingsCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645A38461E918DF73BB6E492 /* SettingsCodingTests.swift */; };
+		F07B61AACF4178B72D4DB6DE /* AboutPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52DE8565BC046FE0EF3D73F /* AboutPane.swift */; };
+		F21DE2041CAAAB5077873F1B /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE90A29DD56E2840A11398A4 /* NotchPanel.swift */; };
+		F2612B9B12D09D092A64FB0C /* SystemMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 312E7A1125D42F93BD6FB4D2 /* SystemMetrics.swift */; };
+		F797EF874AAB6689B0AB4203 /* NSScreen+Notchly.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48EEC9BA36B166B2B78662A3 /* NSScreen+Notchly.swift */; };
+		FD9C938BE17C1F9CF2964823 /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC143C98B9E2AA98A4E913B5 /* ClipboardService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3A8259EBEF3E5695BC8602EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 71BAF84AF3AE44405D4DCE6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A53E9C6982541B67582A76D3;
+			remoteInfo = Notchly;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		015649A0EE72D6AF5804A63E /* ScreenEdge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenEdge.swift; sourceTree = "<group>"; };
+		020AE0767D79CFB9A68B0F85 /* WidgetPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreferences.swift; sourceTree = "<group>"; };
+		0B23A4B815D01DF3DF10D48B /* IconButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconButton.swift; sourceTree = "<group>"; };
+		0D583DADB7918A03DF3CB8F4 /* SettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSection.swift; sourceTree = "<group>"; };
+		0F232AD755A3B0C3F1A38AD3 /* IdleHandleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleHandleSection.swift; sourceTree = "<group>"; };
+		11E4D84B6122089A39375A87 /* PanelPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPreview.swift; sourceTree = "<group>"; };
+		135D8BC8939CA3B1517F6392 /* WebWidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetBridge.swift; sourceTree = "<group>"; };
+		179C2888774180F845FDA677 /* AppSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchTests.swift; sourceTree = "<group>"; };
+		18DC3FA7521C4CF6F66BA644 /* MissingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingWidgetView.swift; sourceTree = "<group>"; };
+		1D4E333D0B9B399CA306EFA0 /* IdleHandleLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleHandleLayout.swift; sourceTree = "<group>"; };
+		209F93B0FAEA0059C85BC70B /* Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Charts.swift; sourceTree = "<group>"; };
+		20A7C03624AF23413F43EA7D /* PanelSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSearchField.swift; sourceTree = "<group>"; };
+		24F7499AD90046A08ADA104F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		25D0B82E3E22F2A42B266B49 /* NSImage+PNG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+PNG.swift"; sourceTree = "<group>"; };
+		29D505EE98DD8655A6C3A027 /* MediaController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaController.swift; sourceTree = "<group>"; };
+		2B194A822E25CB06D20C6E44 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		2DE0BC807367ECCF79255CB9 /* AppleScriptRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptRunner.swift; sourceTree = "<group>"; };
+		2F4934CAD8BB1FBC4DEA0172 /* WidgetSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSlot.swift; sourceTree = "<group>"; };
+		3019CB82BD7F03EEECD2346E /* NotchlyNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchlyNotifications.swift; sourceTree = "<group>"; };
+		30792A230ACD6AA77A2C4B9B /* TrackingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingContainerView.swift; sourceTree = "<group>"; };
+		30A8ED29A227F801BE652A9D /* CustomWidgetPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWidgetPane.swift; sourceTree = "<group>"; };
+		312E7A1125D42F93BD6FB4D2 /* SystemMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetrics.swift; sourceTree = "<group>"; };
+		3264780E41B33CD3B70BF416 /* FlowRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRow.swift; sourceTree = "<group>"; };
+		35788A2FCD486854BB2EA458 /* PanelPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPlacement.swift; sourceTree = "<group>"; };
+		35946585B56AB9C4281B3813 /* PanelGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelGeometryTests.swift; sourceTree = "<group>"; };
+		3DF8D48C843A28BE8BBF6A01 /* AppCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCatalog.swift; sourceTree = "<group>"; };
+		43E9A77ACCBD6710FD7717D0 /* NotchShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShape.swift; sourceTree = "<group>"; };
+		44D4BACD401DA35E0BC9C7E7 /* Notifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifier.swift; sourceTree = "<group>"; };
+		4672C341715604F63BE3FDEC /* HoverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverRow.swift; sourceTree = "<group>"; };
+		468DD26191BC60D92BAEADC0 /* WebWidgetContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetContainer.swift; sourceTree = "<group>"; };
+		48EEC9BA36B166B2B78662A3 /* NSScreen+Notchly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSScreen+Notchly.swift"; sourceTree = "<group>"; };
+		49697A6A9168B05002565F7F /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		497E3FD84F78098598730F02 /* WidgetSettingsForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSettingsForm.swift; sourceTree = "<group>"; };
+		4A23E5AAC629568F980C2380 /* LoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManager.swift; sourceTree = "<group>"; };
+		4A318A4830706026EC506781 /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
+		4FA3D32A773F7BB65FFEA57F /* WebWidgetManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetManifest.swift; sourceTree = "<group>"; };
+		55E6BA953EE38D1B2D22ECCA /* HotkeySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeySpec.swift; sourceTree = "<group>"; };
+		565B76A31C85D454917C710D /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
+		57AD4AF47ED6104AB33ACDF8 /* StatRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatRow.swift; sourceTree = "<group>"; };
+		57B9F8461B26DD14BFDB8D3F /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
+		57D282FCDADA8764FB4EA9C6 /* WidgetPermissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPermissionTests.swift; sourceTree = "<group>"; };
+		5F0949E8110C2C17D308BFD5 /* SlotDropDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotDropDelegate.swift; sourceTree = "<group>"; };
+		645A38461E918DF73BB6E492 /* SettingsCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCodingTests.swift; sourceTree = "<group>"; };
+		652F292018CADD6BF5E1C6F7 /* SystemWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWidget.swift; sourceTree = "<group>"; };
+		65A19D876177F8C24D73FD7F /* GeneralSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsPane.swift; sourceTree = "<group>"; };
+		682DEBDBB5703D3CC6255847 /* WebWidgetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetStore.swift; sourceTree = "<group>"; };
+		6D00DDB2507B2C2D4CCDC73A /* ExampleWidgets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ExampleWidgets; path = Notchly/Resources/ExampleWidgets; sourceTree = SOURCE_ROOT; };
+		732FE97B0EBFE8B55E74572C /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
+		7401D8D2A635C765A94ABEAC /* PanelRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelRootView.swift; sourceTree = "<group>"; };
+		74E4D96A25B32C343AB20097 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
+		78BF619F3DFD2AA826E54E0F /* ClipboardWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWidget.swift; sourceTree = "<group>"; };
+		790B4786A905BFD855E8CD95 /* WidgetPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPermission.swift; sourceTree = "<group>"; };
+		7A42BA12BD31A3F655F5A8AD /* PinnedAppTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedAppTile.swift; sourceTree = "<group>"; };
+		7C85F8443A4C54DFBB2121CC /* SystemSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSamples.swift; sourceTree = "<group>"; };
+		875C572C54D9DCADC669A262 /* IdleHandleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleHandleView.swift; sourceTree = "<group>"; };
+		87BF13B0135183ABE2E44BB5 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
+		8C916B43DC313366A32D83D9 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		8E05E2E7CF21F8074A14CEAB /* LauncherWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherWidget.swift; sourceTree = "<group>"; };
+		8E2A5E57A4926032E4FA9A39 /* JSONValueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValueTests.swift; sourceTree = "<group>"; };
+		9133685F8FF355EAEF2CE665 /* PanelGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelGeometry.swift; sourceTree = "<group>"; };
+		94C8D602F74FC2C5046D1414 /* AppearanceSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsPane.swift; sourceTree = "<group>"; };
+		964AAA98AEDAC39579EAF5C3 /* ClockWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockWidget.swift; sourceTree = "<group>"; };
+		9E02F42CD864148701249B61 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		9EC538F87532A1301C1FEE98 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		A0D2234A37061F33FE931BD2 /* WebWidgetPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetPackage.swift; sourceTree = "<group>"; };
+		A3C4D4A26CFE5F12E94A4E90 /* WidgetSettingField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSettingField.swift; sourceTree = "<group>"; };
+		A4E6B033B89A22048A9FDEF1 /* PanelContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelContentView.swift; sourceTree = "<group>"; };
+		A66F0C9FECF480C7C347E221 /* WidgetSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSettingsPane.swift; sourceTree = "<group>"; };
+		A844B1EE6AB29CEB6AD0DFEE /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
+		AC0C3BE90A1FBC6800DD43CA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AE27035521F879F2EB96DBDC /* NotchlySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchlySettings.swift; sourceTree = "<group>"; };
+		B4EA1EC03526F689F83428F5 /* MediaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaWidget.swift; sourceTree = "<group>"; };
+		B52DE8565BC046FE0EF3D73F /* AboutPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutPane.swift; sourceTree = "<group>"; };
+		B6B06F8C6A481D46F5DF5111 /* HotKeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyRecorder.swift; sourceTree = "<group>"; };
+		C0521CBDD3D10F407D26D08F /* PanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPlacementTests.swift; sourceTree = "<group>"; };
+		CA8699797C1B5613706BDA58 /* WidgetPermissionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPermissionList.swift; sourceTree = "<group>"; };
+		CC4F3C19B79024FF89059FB7 /* IdleChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleChip.swift; sourceTree = "<group>"; };
+		CD163CFC59E2A2F667DF48D7 /* NotchShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShapeTests.swift; sourceTree = "<group>"; };
+		CDD804F858048013E7B127C2 /* HandleRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandleRenderer.swift; sourceTree = "<group>"; };
+		D14F0E5B05D9CAECB90597CE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D83B8070BD0D63966F8FDBAB /* FormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatTests.swift; sourceTree = "<group>"; };
+		DE90A29DD56E2840A11398A4 /* NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanel.swift; sourceTree = "<group>"; };
+		DF4558FF0521CB5EC147D0B4 /* WebWidgetRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetRuntime.swift; sourceTree = "<group>"; };
+		DF5FA80BED6AA0859C8610C7 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
+		E0CB12EDA37C17B2CAB27B01 /* MenuRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuRefresher.swift; sourceTree = "<group>"; };
+		E1141F214C482B5BE5D34D1C /* APIReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIReference.swift; sourceTree = "<group>"; };
+		E2629D92909EB34F37F0C9F8 /* NotchlyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NotchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2A1F3E7D26DBE094EB324E1 /* MediaKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKey.swift; sourceTree = "<group>"; };
+		E57D7B3BEF71A18AF94F7DFC /* IdleHandleLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleHandleLayoutTests.swift; sourceTree = "<group>"; };
+		E624C5B7EC9355A9D5070D57 /* WebWidgetManifestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetManifestTests.swift; sourceTree = "<group>"; };
+		E763A93BD8C65D88E4E4FA7C /* LaunchableApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchableApp.swift; sourceTree = "<group>"; };
+		E915A7520B238DED6A424AA5 /* Notchly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Notchly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB52149BA0B14A85B7EC5899 /* HotKeyFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyFormatter.swift; sourceTree = "<group>"; };
+		EC143C98B9E2AA98A4E913B5 /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardService.swift; sourceTree = "<group>"; };
+		ED739B5A3C1D7FC4E329DC59 /* WebWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebWidgetView.swift; sourceTree = "<group>"; };
+		F7415F4406AFBABAE159EF32 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
+		F7F1219ADBBA1D4AD10792EE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F86DD38271A6584143639571 /* WidgetCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCard.swift; sourceTree = "<group>"; };
+		FB5635A0E26A07E344B7D9A4 /* WidgetRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetRegistry.swift; sourceTree = "<group>"; };
+		FD05355D1F06EAB47E391561 /* WidgetDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDescriptor.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		07EAF0BAD0C86C9C6130A39D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E915A7520B238DED6A424AA5 /* Notchly.app */,
+				E2629D92909EB34F37F0C9F8 /* NotchlyTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1B57A50160AB46BC495CEC51 /* Web */ = {
+			isa = PBXGroup;
+			children = (
+				135D8BC8939CA3B1517F6392 /* WebWidgetBridge.swift */,
+				468DD26191BC60D92BAEADC0 /* WebWidgetContainer.swift */,
+				DF4558FF0521CB5EC147D0B4 /* WebWidgetRuntime.swift */,
+				682DEBDBB5703D3CC6255847 /* WebWidgetStore.swift */,
+				ED739B5A3C1D7FC4E329DC59 /* WebWidgetView.swift */,
+			);
+			path = Web;
+			sourceTree = "<group>";
+		};
+		1BFFD3427869B938C8F1B1E8 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				209F93B0FAEA0059C85BC70B /* Charts.swift */,
+				3264780E41B33CD3B70BF416 /* FlowRow.swift */,
+				4672C341715604F63BE3FDEC /* HoverRow.swift */,
+				0B23A4B815D01DF3DF10D48B /* IconButton.swift */,
+				875C572C54D9DCADC669A262 /* IdleHandleView.swift */,
+				4A318A4830706026EC506781 /* MarqueeText.swift */,
+				18DC3FA7521C4CF6F66BA644 /* MissingWidgetView.swift */,
+				20A7C03624AF23413F43EA7D /* PanelSearchField.swift */,
+				7A42BA12BD31A3F655F5A8AD /* PinnedAppTile.swift */,
+				57AD4AF47ED6104AB33ACDF8 /* StatRow.swift */,
+				D14F0E5B05D9CAECB90597CE /* Theme.swift */,
+				F86DD38271A6584143639571 /* WidgetCard.swift */,
+				D3CB7894BF3BBEA689A408D7 /* Settings */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		27631E7E725C9C7ABBEC2DAE /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				87BF13B0135183ABE2E44BB5 /* AppPaths.swift */,
+				F7415F4406AFBABAE159EF32 /* SettingsStore.swift */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		36097368F4002C697C6ADB1F /* Notchly */ = {
+			isa = PBXGroup;
+			children = (
+				F7F1219ADBBA1D4AD10792EE /* Assets.xcassets */,
+				9BEE22DE195B31BA384BEA89 /* App */,
+				39419EF64AD0D6EE2AC33575 /* Models */,
+				4167C2E3189F77F262B70F06 /* Panel */,
+				27631E7E725C9C7ABBEC2DAE /* Persistence */,
+				39A980483125E2B1B6F4FA2F /* Services */,
+				6D0EB385D3100396FB91D793 /* Support */,
+				1BFFD3427869B938C8F1B1E8 /* UI */,
+				B4415AD6A5D53FD7AF371DE7 /* Widgets */,
+			);
+			path = Notchly;
+			sourceTree = "<group>";
+		};
+		39419EF64AD0D6EE2AC33575 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				DF5FA80BED6AA0859C8610C7 /* ClipboardItem.swift */,
+				55E6BA953EE38D1B2D22ECCA /* HotkeySpec.swift */,
+				CC4F3C19B79024FF89059FB7 /* IdleChip.swift */,
+				A844B1EE6AB29CEB6AD0DFEE /* JSONValue.swift */,
+				E763A93BD8C65D88E4E4FA7C /* LaunchableApp.swift */,
+				3019CB82BD7F03EEECD2346E /* NotchlyNotifications.swift */,
+				AE27035521F879F2EB96DBDC /* NotchlySettings.swift */,
+				8C916B43DC313366A32D83D9 /* NowPlaying.swift */,
+				35788A2FCD486854BB2EA458 /* PanelPlacement.swift */,
+				015649A0EE72D6AF5804A63E /* ScreenEdge.swift */,
+				7C85F8443A4C54DFBB2121CC /* SystemSamples.swift */,
+				4FA3D32A773F7BB65FFEA57F /* WebWidgetManifest.swift */,
+				A0D2234A37061F33FE931BD2 /* WebWidgetPackage.swift */,
+				FD05355D1F06EAB47E391561 /* WidgetDescriptor.swift */,
+				790B4786A905BFD855E8CD95 /* WidgetPermission.swift */,
+				A3C4D4A26CFE5F12E94A4E90 /* WidgetSettingField.swift */,
+				2F4934CAD8BB1FBC4DEA0172 /* WidgetSlot.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		39A980483125E2B1B6F4FA2F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				3DF8D48C843A28BE8BBF6A01 /* AppCatalog.swift */,
+				2DE0BC807367ECCF79255CB9 /* AppleScriptRunner.swift */,
+				EC143C98B9E2AA98A4E913B5 /* ClipboardService.swift */,
+				732FE97B0EBFE8B55E74572C /* HotKeyCenter.swift */,
+				4A23E5AAC629568F980C2380 /* LoginItemManager.swift */,
+				29D505EE98DD8655A6C3A027 /* MediaController.swift */,
+				E2A1F3E7D26DBE094EB324E1 /* MediaKey.swift */,
+				312E7A1125D42F93BD6FB4D2 /* SystemMetrics.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		4167C2E3189F77F262B70F06 /* Panel */ = {
+			isa = PBXGroup;
+			children = (
+				1D4E333D0B9B399CA306EFA0 /* IdleHandleLayout.swift */,
+				DE90A29DD56E2840A11398A4 /* NotchPanel.swift */,
+				43E9A77ACCBD6710FD7717D0 /* NotchShape.swift */,
+				A4E6B033B89A22048A9FDEF1 /* PanelContentView.swift */,
+				565B76A31C85D454917C710D /* PanelController.swift */,
+				9133685F8FF355EAEF2CE665 /* PanelGeometry.swift */,
+				7401D8D2A635C765A94ABEAC /* PanelRootView.swift */,
+				30792A230ACD6AA77A2C4B9B /* TrackingContainerView.swift */,
+			);
+			path = Panel;
+			sourceTree = "<group>";
+		};
+		6D0EB385D3100396FB91D793 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				9EC538F87532A1301C1FEE98 /* Color+Hex.swift */,
+				74E4D96A25B32C343AB20097 /* Format.swift */,
+				EB52149BA0B14A85B7EC5899 /* HotKeyFormatter.swift */,
+				44D4BACD401DA35E0BC9C7E7 /* Notifier.swift */,
+				25D0B82E3E22F2A42B266B49 /* NSImage+PNG.swift */,
+				48EEC9BA36B166B2B78662A3 /* NSScreen+Notchly.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		8B857380EEAB433FEF6C9CFE /* NotchlyTests */ = {
+			isa = PBXGroup;
+			children = (
+				179C2888774180F845FDA677 /* AppSearchTests.swift */,
+				D83B8070BD0D63966F8FDBAB /* FormatTests.swift */,
+				CDD804F858048013E7B127C2 /* HandleRenderer.swift */,
+				E57D7B3BEF71A18AF94F7DFC /* IdleHandleLayoutTests.swift */,
+				8E2A5E57A4926032E4FA9A39 /* JSONValueTests.swift */,
+				CD163CFC59E2A2F667DF48D7 /* NotchShapeTests.swift */,
+				35946585B56AB9C4281B3813 /* PanelGeometryTests.swift */,
+				C0521CBDD3D10F407D26D08F /* PanelPlacementTests.swift */,
+				645A38461E918DF73BB6E492 /* SettingsCodingTests.swift */,
+				E624C5B7EC9355A9D5070D57 /* WebWidgetManifestTests.swift */,
+				57D282FCDADA8764FB4EA9C6 /* WidgetPermissionTests.swift */,
+			);
+			path = NotchlyTests;
+			sourceTree = "<group>";
+		};
+		9BEE22DE195B31BA384BEA89 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AC0C3BE90A1FBC6800DD43CA /* AppDelegate.swift */,
+				49697A6A9168B05002565F7F /* AppEnvironment.swift */,
+				2B194A822E25CB06D20C6E44 /* main.swift */,
+				E0CB12EDA37C17B2CAB27B01 /* MenuRefresher.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9F1EE439D6C15CF279DDD8EB /* Builtin */ = {
+			isa = PBXGroup;
+			children = (
+				78BF619F3DFD2AA826E54E0F /* ClipboardWidget.swift */,
+				964AAA98AEDAC39579EAF5C3 /* ClockWidget.swift */,
+				8E05E2E7CF21F8074A14CEAB /* LauncherWidget.swift */,
+				B4EA1EC03526F689F83428F5 /* MediaWidget.swift */,
+				652F292018CADD6BF5E1C6F7 /* SystemWidget.swift */,
+				020AE0767D79CFB9A68B0F85 /* WidgetPreferences.swift */,
+			);
+			path = Builtin;
+			sourceTree = "<group>";
+		};
+		ACD8056ABA8E405ADD4A108F = {
+			isa = PBXGroup;
+			children = (
+				6D00DDB2507B2C2D4CCDC73A /* ExampleWidgets */,
+				36097368F4002C697C6ADB1F /* Notchly */,
+				8B857380EEAB433FEF6C9CFE /* NotchlyTests */,
+				07EAF0BAD0C86C9C6130A39D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B4415AD6A5D53FD7AF371DE7 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				FB5635A0E26A07E344B7D9A4 /* WidgetRegistry.swift */,
+				9F1EE439D6C15CF279DDD8EB /* Builtin */,
+				1B57A50160AB46BC495CEC51 /* Web */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		D3CB7894BF3BBEA689A408D7 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				B52DE8565BC046FE0EF3D73F /* AboutPane.swift */,
+				E1141F214C482B5BE5D34D1C /* APIReference.swift */,
+				94C8D602F74FC2C5046D1414 /* AppearanceSettingsPane.swift */,
+				30A8ED29A227F801BE652A9D /* CustomWidgetPane.swift */,
+				65A19D876177F8C24D73FD7F /* GeneralSettingsPane.swift */,
+				B6B06F8C6A481D46F5DF5111 /* HotKeyRecorder.swift */,
+				0F232AD755A3B0C3F1A38AD3 /* IdleHandleSection.swift */,
+				11E4D84B6122089A39375A87 /* PanelPreview.swift */,
+				0D583DADB7918A03DF3CB8F4 /* SettingsSection.swift */,
+				57B9F8461B26DD14BFDB8D3F /* SettingsTab.swift */,
+				24F7499AD90046A08ADA104F /* SettingsView.swift */,
+				9E02F42CD864148701249B61 /* SettingsWindowController.swift */,
+				5F0949E8110C2C17D308BFD5 /* SlotDropDelegate.swift */,
+				CA8699797C1B5613706BDA58 /* WidgetPermissionList.swift */,
+				497E3FD84F78098598730F02 /* WidgetSettingsForm.swift */,
+				A66F0C9FECF480C7C347E221 /* WidgetSettingsPane.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		"TEMP_FD663F8D-3787-4030-883D-057A4CE510C2" /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5CD91B9E1B9EC33B71D66D6E /* NotchlyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E6E72A2E871CCDEE5B687B54 /* Build configuration list for PBXNativeTarget "NotchlyTests" */;
+			buildPhases = (
+				A99BE3B8237FFF3265190BB7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5604E3C4BE1F781B958A18E0 /* PBXTargetDependency */,
+			);
+			name = NotchlyTests;
+			packageProductDependencies = (
+			);
+			productName = NotchlyTests;
+			productReference = E2629D92909EB34F37F0C9F8 /* NotchlyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A53E9C6982541B67582A76D3 /* Notchly */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 892B4180899E69B51C98EA73 /* Build configuration list for PBXNativeTarget "Notchly" */;
+			buildPhases = (
+				31EFC7E6E53DC23051E0DC13 /* Sources */,
+				084D694BAF88BF5B6C9372A3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Notchly;
+			packageProductDependencies = (
+			);
+			productName = Notchly;
+			productReference = E915A7520B238DED6A424AA5 /* Notchly.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		71BAF84AF3AE44405D4DCE6D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					5CD91B9E1B9EC33B71D66D6E = {
+						ProvisioningStyle = Automatic;
+					};
+					A53E9C6982541B67582A76D3 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C065D75A2036A21571A15A42 /* Build configuration list for PBXProject "Notchly" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = ACD8056ABA8E405ADD4A108F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 07EAF0BAD0C86C9C6130A39D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A53E9C6982541B67582A76D3 /* Notchly */,
+				5CD91B9E1B9EC33B71D66D6E /* NotchlyTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		084D694BAF88BF5B6C9372A3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B342D24D911955DEE44F06E /* Assets.xcassets in Resources */,
+				1D7983F475CA38DEAA4A1496 /* ExampleWidgets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		31EFC7E6E53DC23051E0DC13 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				09CE1BA63D937392648E550C /* APIReference.swift in Sources */,
+				F07B61AACF4178B72D4DB6DE /* AboutPane.swift in Sources */,
+				28AE518F3104D0F119771441 /* AppCatalog.swift in Sources */,
+				61AFE312289D1D40BBD3B1E9 /* AppDelegate.swift in Sources */,
+				C6CEFBC46772E51AF6E1C361 /* AppEnvironment.swift in Sources */,
+				19589077DD4CAFBA81DAE909 /* AppPaths.swift in Sources */,
+				482260674D24A2465C0DBFF7 /* AppearanceSettingsPane.swift in Sources */,
+				8D47278828AF87B221BF94D1 /* AppleScriptRunner.swift in Sources */,
+				DA96DD1E6DBF663FC0FBF68E /* Charts.swift in Sources */,
+				70E4EBC98DC02C7E8A2DBCA5 /* ClipboardItem.swift in Sources */,
+				FD9C938BE17C1F9CF2964823 /* ClipboardService.swift in Sources */,
+				34FE6E1729369F098AF23DDB /* ClipboardWidget.swift in Sources */,
+				47AC5164A0C189BF3C67CAD9 /* ClockWidget.swift in Sources */,
+				CE779AA607FEC6FD6BEAB595 /* Color+Hex.swift in Sources */,
+				64BEBEB2425D890C8FB0D574 /* CustomWidgetPane.swift in Sources */,
+				736BEE896AA09FE7E477B273 /* FlowRow.swift in Sources */,
+				023C859C568227F55F6868C6 /* Format.swift in Sources */,
+				BC722E3DE448D207F83A5D70 /* GeneralSettingsPane.swift in Sources */,
+				DBA854C7CB1DB265DC9F6AC4 /* HotKeyCenter.swift in Sources */,
+				828E5BF7F8072398A3B8DF69 /* HotKeyFormatter.swift in Sources */,
+				829F9A8E45C6D29920A57AD2 /* HotKeyRecorder.swift in Sources */,
+				B07B01C36110EBDDBE22E098 /* HotkeySpec.swift in Sources */,
+				49595F87B36DD78CBAE20A57 /* HoverRow.swift in Sources */,
+				AA70E7A284DBA574763FCFE6 /* IconButton.swift in Sources */,
+				699F6068C23BDB787FB7DE28 /* IdleChip.swift in Sources */,
+				BB29FA7CD901500F2FB3E297 /* IdleHandleLayout.swift in Sources */,
+				67E47C5BF104209C63730E37 /* IdleHandleSection.swift in Sources */,
+				D32FB8AF2466D86426F44642 /* IdleHandleView.swift in Sources */,
+				5916A678123D82BFAB8F0ED3 /* JSONValue.swift in Sources */,
+				E070BC09453DA7B2E9DC71D2 /* LaunchableApp.swift in Sources */,
+				DE3207913F0D847D1C006734 /* LauncherWidget.swift in Sources */,
+				63627B828764B55E547726EC /* LoginItemManager.swift in Sources */,
+				7AEEBF9B1AF9630EB1CFE584 /* MarqueeText.swift in Sources */,
+				36129D2AD958408BF4F6359F /* MediaController.swift in Sources */,
+				2FE2BBA6A204CE84F168A6B3 /* MediaKey.swift in Sources */,
+				30A00914F88379EFF36BBDE4 /* MediaWidget.swift in Sources */,
+				4C6D31075B0FBF9456BDA3F5 /* MenuRefresher.swift in Sources */,
+				087F6CA7FB4DFF84EB606F02 /* MissingWidgetView.swift in Sources */,
+				4D9B700F570A644D4623DE94 /* NSImage+PNG.swift in Sources */,
+				F797EF874AAB6689B0AB4203 /* NSScreen+Notchly.swift in Sources */,
+				F21DE2041CAAAB5077873F1B /* NotchPanel.swift in Sources */,
+				9D24E89F04AD54FB838FBBEB /* NotchShape.swift in Sources */,
+				23E7085692BF52E043BA5263 /* NotchlyNotifications.swift in Sources */,
+				739FF7BE56D5BAD94A9BF150 /* NotchlySettings.swift in Sources */,
+				A18595F8AA88DF48510AC0A8 /* Notifier.swift in Sources */,
+				2C22705BCB71E67BCF277053 /* NowPlaying.swift in Sources */,
+				81DBE2E282F4446464A40CD0 /* PanelContentView.swift in Sources */,
+				013A1833DCB8E8FA23C4BBCE /* PanelController.swift in Sources */,
+				81A8134AC9C4EB929D4B9644 /* PanelGeometry.swift in Sources */,
+				C20F0F1F10FB838A4DD96C2B /* PanelPlacement.swift in Sources */,
+				A0A1ACA48465C36B64BBF6CF /* PanelPreview.swift in Sources */,
+				46A012671AB900F420299305 /* PanelRootView.swift in Sources */,
+				CACCC2E347A6B96A5DBD2398 /* PanelSearchField.swift in Sources */,
+				B954B233ECDC1B241D27D47B /* PinnedAppTile.swift in Sources */,
+				7693E7D81F0110149E21234C /* ScreenEdge.swift in Sources */,
+				2AE9111309EC4F3E73B28C95 /* SettingsSection.swift in Sources */,
+				D7DB83D199318F1C34C838E2 /* SettingsStore.swift in Sources */,
+				8F458516D5A96E32C3C2EE54 /* SettingsTab.swift in Sources */,
+				5F2A44CDBA4988C9450C044A /* SettingsView.swift in Sources */,
+				6953DD40F9F06F5CAD9E472E /* SettingsWindowController.swift in Sources */,
+				1DC1A5453DD147365365FC68 /* SlotDropDelegate.swift in Sources */,
+				4DC5AB0AD9AF93D3251292D2 /* StatRow.swift in Sources */,
+				F2612B9B12D09D092A64FB0C /* SystemMetrics.swift in Sources */,
+				3231E253191C782E1E8654D7 /* SystemSamples.swift in Sources */,
+				2881A8276F1908FEC30611D8 /* SystemWidget.swift in Sources */,
+				40DC21E762A1246455178400 /* Theme.swift in Sources */,
+				85732952E5610B0C6914F9FE /* TrackingContainerView.swift in Sources */,
+				31C01DB18587A357A6C44D33 /* WebWidgetBridge.swift in Sources */,
+				1C71D1367E5F29421EAF40C8 /* WebWidgetContainer.swift in Sources */,
+				E9D491255C8C8BF82393D104 /* WebWidgetManifest.swift in Sources */,
+				5623094325098CB2008B60E3 /* WebWidgetPackage.swift in Sources */,
+				33CBBDDBF5506AEA879E7B0B /* WebWidgetRuntime.swift in Sources */,
+				8EE164F6DB7699538DC907A9 /* WebWidgetStore.swift in Sources */,
+				99BDA241D68594D1BB0C2CC0 /* WebWidgetView.swift in Sources */,
+				0A03542217A8560A2CF6899C /* WidgetCard.swift in Sources */,
+				9D6AB43AFF39C72EC862D7E8 /* WidgetDescriptor.swift in Sources */,
+				760AEF7195C538B82D325542 /* WidgetPermission.swift in Sources */,
+				63965CB34E52ABCB5FA60480 /* WidgetPermissionList.swift in Sources */,
+				B83FEFA1A376C376E88874DA /* WidgetPreferences.swift in Sources */,
+				8713BA5FE53EF3A00D4CD91A /* WidgetRegistry.swift in Sources */,
+				E01451CD71707C206D87A004 /* WidgetSettingField.swift in Sources */,
+				E8E3F26D5E2A39428D1830F4 /* WidgetSettingsForm.swift in Sources */,
+				E73DAC8784687BDFC79A9885 /* WidgetSettingsPane.swift in Sources */,
+				5FA626FA6C5D2EED0F2C4025 /* WidgetSlot.swift in Sources */,
+				3E5757CDB90DC1760506FBB4 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A99BE3B8237FFF3265190BB7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				27C373A2AFE78404996D803D /* AppSearchTests.swift in Sources */,
+				40DD65B4EDE1EDE26F29E2F0 /* FormatTests.swift in Sources */,
+				42D0CDFFAC98B8C7EB2A5765 /* HandleRenderer.swift in Sources */,
+				2C2C1E0E860D9F389D689679 /* IdleHandleLayoutTests.swift in Sources */,
+				D654F1DDD06B103214B60E42 /* JSONValueTests.swift in Sources */,
+				9F3981BA8C899C64154930E8 /* NotchShapeTests.swift in Sources */,
+				92420EC012FAB378F440432D /* PanelGeometryTests.swift in Sources */,
+				3BBC029E3330FF7FA987FF02 /* PanelPlacementTests.swift in Sources */,
+				EBF4BC64A709A074F76A26D9 /* SettingsCodingTests.swift in Sources */,
+				A452966F4007240E3F0A77D6 /* WebWidgetManifestTests.swift in Sources */,
+				4BEAA278E385D5621FCCB2F5 /* WidgetPermissionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5604E3C4BE1F781B958A18E0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A53E9C6982541B67582A76D3 /* Notchly */;
+			targetProxy = 3A8259EBEF3E5695BC8602EE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		2F92EC6C6588A5D84AC37F22 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Notchly/Notchly.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Notchly/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mberrish.Notchly;
+				PRODUCT_NAME = Notchly;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		55DDEC89948699E46CB7441F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		8CC8A419A375162A97A61BF5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Notchly.app/Contents/MacOS/Notchly";
+			};
+			name = Debug;
+		};
+		CC356C1583675FF5E59E9002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Notchly.app/Contents/MacOS/Notchly";
+			};
+			name = Release;
+		};
+		DE0BECA53186115AA026A024 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		E01AC21123D8ED4CF57999A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Notchly/Notchly.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Notchly/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mberrish.Notchly;
+				PRODUCT_NAME = Notchly;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		892B4180899E69B51C98EA73 /* Build configuration list for PBXNativeTarget "Notchly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E01AC21123D8ED4CF57999A5 /* Debug */,
+				2F92EC6C6588A5D84AC37F22 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C065D75A2036A21571A15A42 /* Build configuration list for PBXProject "Notchly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55DDEC89948699E46CB7441F /* Debug */,
+				DE0BECA53186115AA026A024 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E6E72A2E871CCDEE5B687B54 /* Build configuration list for PBXNativeTarget "NotchlyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8CC8A419A375162A97A61BF5 /* Debug */,
+				CC356C1583675FF5E59E9002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 71BAF84AF3AE44405D4DCE6D /* Project object */;
+}
