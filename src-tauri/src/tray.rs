@@ -33,6 +33,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         })
         .collect::<tauri::Result<_>>()?;
 
+    let settings_item = MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?;
     let widgets = MenuItem::with_id(app, "widgets", "Open Widgets Folder", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Notchly", true, Some("CmdOrCtrl+Q"))?;
 
@@ -49,6 +50,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &edges[3],
             &PredefinedMenuItem::separator(app)?,
             &widgets,
+            &settings_item,
             &PredefinedMenuItem::separator(app)?,
             &quit,
         ],

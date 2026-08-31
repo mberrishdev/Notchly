@@ -338,3 +338,93 @@ mod tests {
         }
     }
 }
+
+/// Scaffolds a new widget folder and returns it, ready to open in an editor.
+pub fn create_starter(root: &Path, name: &str) -> Result<PathBuf, String> {
+    let slug: String = name
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    let slug = slug.trim_matches('-').to_string();
+    let base = if slug.is_empty() { "my-widget".to_string() } else { slug };
+
+    let mut folder = root.join(&base);
+    let mut suffix = 2;
+    while folder.exists() {
+        folder = root.join(format!("{base}-{suffix}"));
+        suffix += 1;
+    }
+    std::fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
+
+    let display_name = if name.trim().is_empty() { "My Widget" } else { name.trim() };
+    let manifest = serde_json::json!({
+        "id": format!("local.{}", folder.file_name().unwrap_or_default().to_string_lossy()),
+        "name": display_name,
+        "version": "1.0.0",
+        "description": "A custom widget.",
+        "entry": "index.html",
+        "height": 150,
+        "permissions": ["system"],
+        "settings": [
+            { "key": "greeting", "type": "string", "label": "Greeting", "default": "Hello" }
+        ]
+    });
+    std::fs::write(
+        folder.join("widget.json"),
+        serde_json::to_string_pretty(&manifest).unwrap_or_default(),
+    )
+    .map_err(|error| error.to_string())?;
+    std::fs::write(folder.join("index.html"), STARTER_HTML).map_err(|error| error.to_string())?;
+    Ok(folder)
+}
+
+const STARTER_HTML: &str = r#"<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { display: flex; flex-direction: column; gap: 10px; padding: 14px; justify-content: center; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
+    p  { margin: 0; color: var(--notchly-text-secondary); }
+    .row { display: flex; gap: 8px; align-items: baseline; }
+    .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+    button {
+      appearance: none; border: 0; border-radius: 8px; padding: 7px 12px;
+      background: var(--notchly-accent, #6E9BFF); color: #06070A;
+      font: inherit; font-weight: 600; cursor: pointer;
+    }
+    button:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+  <h1 id="greeting">Hello</h1>
+  <p>Edit <code>index.html</code> and this panel reloads itself.</p>
+  <div class="row"><span>CPU</span><span class="val" id="cpu">--</span></div>
+  <button id="tick">Count: <span id="count">0</span></button>
+
+  <script>
+    (async () => {
+      const greeting = await notchly.settings.get('greeting');
+      document.getElementById('greeting').textContent = greeting ?? 'Hello';
+
+      async function refresh() {
+        const stats = await notchly.system.stats();
+        document.getElementById('cpu').textContent = Math.round(stats.cpu * 100) + '%';
+      }
+      refresh();
+      setInterval(refresh, 2000);
+
+      let count = (await notchly.storage.get('count')) ?? 0;
+      const label = document.getElementById('count');
+      label.textContent = count;
+      document.getElementById('tick').onclick = async () => {
+        count += 1;
+        label.textContent = count;
+        await notchly.storage.set('count', count);
+      };
+    })();
+  </script>
+</body>
+</html>
+"#;

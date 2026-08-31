@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Everything the panel window needs. Tauri v2 denies calls that aren't listed here, so a missing entry shows up as a silently blank panel.",
   "windows": [
-    "panel"
+    "panel",
+    "settings"
   ],
   "permissions": [
     "core:default",

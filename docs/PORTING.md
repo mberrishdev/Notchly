@@ -72,14 +72,14 @@ edge without a special case.
 - Custom widgets: discovery, manifest validation, hot reload, per-widget CSP,
   permission gating, storage, and the full `window.notchly` surface
 - Menu bar item, global hotkey, launch at login
-- **54 Rust tests**, ported from the Swift suite plus new ones for the protocol
+- Settings window: five panes, live panel preview, drag-to-reorder widgets and idle
+  chips, per-widget permission switches, schema-driven widget settings, hotkey
+  recorder, and the per-widget log
+- **57 Rust tests**, ported from the Swift suite plus new ones for the protocol
 
 ## Gaps
 
 Honest list of what the Swift build does that this one does not yet.
-
-**No settings window.** Settings are editable through the menu bar item and by
-editing `settings.json`. This is the largest remaining piece of work.
 
 **Windows is stubbed.** `platform.rs` has the module structure and macOS
 implementation; the Windows side needs `WS_EX_NOACTIVATE | WS_EX_TOPMOST` via
@@ -101,8 +101,8 @@ permissions are properly isolated; files are not. Widget files are user-installe
 code rather than secrets, so this is low severity — but it is a regression from the
 Swift build and should be closed.
 
-**Not yet ported:** clipboard image capture, per-widget log UI, the web inspector
-toggle, and the settings-window preview of the panel.
+**Not yet ported:** clipboard image capture, clipboard pinning, the web inspector
+toggle, and the second time zone in the clock widget.
 
 ## Running it alongside the Swift build
 

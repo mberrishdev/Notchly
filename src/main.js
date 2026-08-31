@@ -253,6 +253,10 @@ function wire() {
     panel.close();
   });
 
+  document.getElementById("settings-button").addEventListener("click", () => {
+    invoke("open_settings");
+  });
+
   document.getElementById("pin-button").addEventListener("click", () => {
     if (!current) return;
     const settings = { ...current.settings, isPinned: !current.settings.isPinned };

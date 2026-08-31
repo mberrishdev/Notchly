@@ -1,4 +1,5 @@
 mod bridge;
+mod builtins;
 mod geometry;
 mod panel;
 mod platform;
@@ -134,6 +135,75 @@ fn widget_log(app: AppHandle, widget_id: String) -> Vec<String> {
 }
 
 #[tauri::command]
+fn builtin_widgets() -> Vec<builtins::Descriptor> {
+    builtins::all()
+}
+
+#[tauri::command]
+fn list_displays(app: AppHandle) -> Vec<String> {
+    app.get_webview_window(panel::PANEL_LABEL)
+        .and_then(|window| window.available_monitors().ok())
+        .map(|monitors| monitors.iter().filter_map(|m| m.name().cloned()).collect())
+        .unwrap_or_default()
+}
+
+/// Opens the settings window, or brings it forward if it already exists.
+#[tauri::command]
+fn open_settings(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "settings",
+        tauri::WebviewUrl::App("settings.html".into()),
+    )
+    .title("Notchly Settings")
+    .inner_size(720.0, 620.0)
+    .min_inner_size(660.0, 520.0)
+    .resizable(true)
+    .center()
+    .build()
+    .map(|_| ())
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn create_starter_widget(app: AppHandle, name: String) -> Result<String, String> {
+    let folder = widgets::create_starter(&settings::widgets_dir(), &name)?;
+    panel::rescan_widgets(&app);
+    Ok(folder.display().to_string())
+}
+
+#[tauri::command]
+fn reinstall_examples(app: AppHandle) -> usize {
+    let count = app
+        .path()
+        .resource_dir()
+        .map(|resources| widgets::copy_examples(&resources, &settings::widgets_dir(), true))
+        .unwrap_or(0);
+    panel::rescan_widgets(&app);
+    count
+}
+
+#[tauri::command]
+fn reload_all_widgets(app: AppHandle) {
+    let ids = panel::with_state(&app, |state| {
+        state.catalog.packages.iter().map(|p| p.manifest.id.clone()).collect::<Vec<_>>()
+    })
+    .unwrap_or_default();
+    panel::with_state(&app, |state| {
+        for id in ids {
+            *state.revisions.entry(id).or_insert(0) += 1;
+        }
+    });
+    panel::rescan_widgets(&app);
+}
+
+#[tauri::command]
 fn search_apps(app: AppHandle, query: String) -> Vec<services::apps::App> {
     let apps = panel::with_state(&app, |state| state.apps.clone()).unwrap_or_default();
     services::apps::rank(&query, &apps, 8).into_iter().cloned().collect()
@@ -159,6 +229,9 @@ pub fn handle_tray_action(app: &AppHandle, id: &str) {
         "widgets" => {
             let path = settings::widgets_dir().display().to_string();
             let _ = tauri_plugin_opener::open_path(path, None::<&str>);
+        }
+        "settings" => {
+            let _ = open_settings(app.clone());
         }
         "pin" => mutate_settings(app, |settings| settings.is_pinned = !settings.is_pinned),
         "login" => {
@@ -246,7 +319,13 @@ pub fn run() {
             widget_log,
             open_widgets_folder,
             search_apps,
-            launch_app
+            launch_app,
+            builtin_widgets,
+            list_displays,
+            open_settings,
+            create_starter_widget,
+            reinstall_examples,
+            reload_all_widgets
         ])
         .setup(move |app| {
             // Notchly is an accessory app: no Dock tile, just the panel.
@@ -298,12 +377,13 @@ pub fn run() {
 fn run_capture_pass(app: AppHandle, dir: String) {
     let _ = std::fs::create_dir_all(&dir);
 
-    fn shot(app: &AppHandle, dir: &str, name: &str) {
+    fn shot_window(app: &AppHandle, dir: &str, name: &str, window_label: &str) {
         let path = format!("{dir}/{name}.png");
         let label = name.to_string();
+        let target = window_label.to_string();
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
-            if let Some(window) = handle.get_webview_window(PANEL_LABEL) {
+            if let Some(window) = handle.get_webview_window(&target) {
                 println!(
                     "NOTCHLY-CAPTURE {label} {}",
                     platform::capture_png(&window, &path)
@@ -312,13 +392,35 @@ fn run_capture_pass(app: AppHandle, dir: String) {
         });
     }
 
+    let shot = |name: &str| shot_window(&app, &dir, name, PANEL_LABEL);
+
     std::thread::sleep(std::time::Duration::from_millis(2200));
-    shot(&app, &dir, "idle");
+    shot("idle");
 
     let opener = app.clone();
     let _ = app.run_on_main_thread(move || panel::open(&opener));
     std::thread::sleep(std::time::Duration::from_millis(1400));
-    shot(&app, &dir, "open");
+    shot("open");
+
+    // Walk the settings window's tabs too; it is the only other surface with layout.
+    let settings_app = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        let _ = open_settings(settings_app);
+    });
+    std::thread::sleep(std::time::Duration::from_millis(1800));
+    for tab in ["general", "appearance", "widgets", "custom"] {
+        let selector = app.clone();
+        let script = format!(
+            "document.querySelector('[data-tab=\"{tab}\"]')?.click()"
+        );
+        let _ = app.run_on_main_thread(move || {
+            if let Some(window) = selector.get_webview_window("settings") {
+                let _ = window.eval(&script);
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        shot_window(&app, &dir, &format!("settings-{tab}"), "settings");
+    }
 
     println!("NOTCHLY-CAPTURE-DONE");
 }
