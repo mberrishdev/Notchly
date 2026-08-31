@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Notchly</title>
+  <link rel="stylesheet" href="styles/panel.css" />
+</head>
+<body>
+  <!-- The panel is drawn as an SVG shape on a transparent page, so the concave
+       corners are real geometry rather than a rounded rectangle pretending. -->
+  <div id="panel">
+    <svg id="outline" aria-hidden="true">
+      <defs>
+        <clipPath id="panel-clip"><path id="clip-path" /></clipPath>
+        <filter id="panel-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="-8" dy="4" stdDeviation="12" flood-color="#000" flood-opacity="0.5" />
+        </filter>
+      </defs>
+      <path id="shape" />
+      <path id="hairline" />
+    </svg>
+    <div id="content">
+      <header>
+        <span class="dot"></span>
+        <span class="title">Notchly</span>
+      </header>
+      <p class="spike-note">Phase&nbsp;0 spike</p>
+      <pre id="report">checking window…</pre>
+    </div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

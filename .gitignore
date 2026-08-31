@@ -12,3 +12,9 @@ build/
 *.dmg
 
 .claude
+
+# Tauri / Node
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+dist/
