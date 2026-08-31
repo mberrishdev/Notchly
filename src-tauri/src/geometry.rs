@@ -205,8 +205,13 @@ impl PanelGeometry {
     }
 
     /// Centre of the panel along its edge, in display coordinates.
-    pub fn edge_center(&self, expanded: bool) -> f64 {
-        let half = self.extent(expanded) / 2.0 + self.inverse_radius(expanded) + self.margin(expanded);
+    ///
+    /// Deliberately independent of open/closed: clamping with the idle handle's much
+    /// smaller half-extent put the two states at different centres, so the panel slid
+    /// along its edge as it opened. The open footprint is the binding constraint, so
+    /// both states use it and the panel grows in place.
+    pub fn edge_center(&self) -> f64 {
+        let half = self.extent(true) / 2.0 + self.inverse_radius(true) + self.margin(true);
         let (lo, hi) = if self.edge.grows_horizontally() {
             (self.screen.y + half, self.screen.max_y() - half)
         } else {
@@ -226,7 +231,7 @@ impl PanelGeometry {
         let margin = self.margin(expanded);
         let depth = self.depth(expanded) + margin;
         let extent = self.extent(expanded) + 2.0 * self.inverse_radius(expanded) + 2.0 * margin;
-        let center = self.edge_center(expanded);
+        let center = self.edge_center();
 
         match self.edge {
             ScreenEdge::Trailing => Rect::new(
@@ -340,12 +345,11 @@ mod tests {
     #[test]
     fn alignment_zero_is_top_for_side_edges_and_left_for_top_and_bottom() {
         assert!(
-            geometry(ScreenEdge::Trailing, 0.0).edge_center(true)
-                < geometry(ScreenEdge::Trailing, 1.0).edge_center(true)
+            geometry(ScreenEdge::Trailing, 0.0).edge_center()
+                < geometry(ScreenEdge::Trailing, 1.0).edge_center()
         );
         assert!(
-            geometry(ScreenEdge::Top, 0.0).edge_center(true)
-                < geometry(ScreenEdge::Top, 1.0).edge_center(true)
+            geometry(ScreenEdge::Top, 0.0).edge_center() < geometry(ScreenEdge::Top, 1.0).edge_center()
         );
     }
 
@@ -447,6 +451,22 @@ mod tests {
                 2 => assert!(m.offset_y.abs() < 0.001),
                 _ => assert!((m.offset_y + m.shape_height - m.window_height).abs() < 0.001),
             }
+        }
+    }
+
+    #[test]
+    fn the_panel_grows_in_place_rather_than_sliding_along_its_edge() {
+        // Both states must share a centre, or opening visibly slides the panel.
+        for edge in [ScreenEdge::Trailing, ScreenEdge::Leading, ScreenEdge::Top, ScreenEdge::Bottom] {
+            let g = geometry(edge, 0.42);
+            let idle = g.window_frame(false);
+            let open = g.window_frame(true);
+            let (idle_centre, open_centre) = if edge.grows_horizontally() {
+                (idle.y + idle.height / 2.0, open.y + open.height / 2.0)
+            } else {
+                (idle.x + idle.width / 2.0, open.x + open.width / 2.0)
+            };
+            assert!((idle_centre - open_centre).abs() < 0.001, "{edge:?} slid on open");
         }
     }
 
