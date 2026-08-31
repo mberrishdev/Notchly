@@ -1,45 +1,154 @@
-import { notchPath, growsHorizontally } from "./lib/notch-shape.js";
+import { panel, listen, invoke } from "./lib/bridge.js";
+import { renderShape } from "./lib/panel-view.js";
+import { renderIdleHandle } from "./lib/idle-handle.js";
 
-const EDGE = "trailing";
-const CORNER_RADIUS = 26;
-const INVERSE_RADIUS = 14;
+/** Latest state pushed from Rust. Rust owns the window; this owns what's drawn in it. */
+let current = null;
+/** Live values for the idle chips, refreshed only while something needs them. */
+let ambient = { metrics: {}, media: null, clipboardCount: 0, widgetIcons: [] };
 
-// The real panel reserves room around the shape for its shadow; the spike keeps that
-// margin so there is genuinely empty window area to test transparency against.
-const SHADOW_MARGIN = 40;
+let openTimer = null;
+let closeTimer = null;
+let dragging = false;
+let dragStart = null;
+/// Guards against re-opening under a pointer that never left after an explicit close.
+let hoverSuppressedUntil = 0;
+
+const clearTimers = () => {
+  clearTimeout(openTimer);
+  clearTimeout(closeTimer);
+  openTimer = null;
+  closeTimer = null;
+};
 
 function render() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const shapeWidth = width - SHADOW_MARGIN;
-  const path = notchPath(EDGE, shapeWidth, height, CORNER_RADIUS, INVERSE_RADIUS);
+  if (!current) return;
+  const { metrics, settings } = current;
+  renderShape(metrics, settings);
 
-  for (const id of ["shape", "hairline", "clip-path"]) {
-    const node = document.getElementById(id);
-    node.setAttribute("d", path);
-    node.setAttribute("transform", `translate(${SHADOW_MARGIN} 0)`);
+  const handle = document.getElementById("idle-handle");
+  const body = document.getElementById("panel-body");
+
+  if (metrics.expanded) {
+    handle.hidden = true;
+    body.hidden = false;
+  } else {
+    body.hidden = true;
+    handle.hidden = !metrics.showsContent;
+    if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
   }
-
-  // Keep content clear of the concave flares at either end.
-  const pad = Math.max(INVERSE_RADIUS, 6);
-  const content = document.getElementById("content");
-  content.style.left = `${SHADOW_MARGIN}px`;
-  content.style.padding = growsHorizontally(EDGE)
-    ? `${pad}px 16px`
-    : `14px ${pad}px`;
 }
 
-render();
-window.addEventListener("resize", render);
+// Pointer handling. The window is exactly the panel plus its margin, so entering and
+// leaving the document is entering and leaving the panel.
+function pointerEntered() {
+  clearTimers();
+  document.body.dataset.hover = "true";
+  if (!current || current.metrics.expanded) return;
+  if (Date.now() < hoverSuppressedUntil) return;
+  if (current.settings.activation !== "hover") return;
+  openTimer = setTimeout(() => panel.open(), current.settings.openDelay * 1000);
+}
 
-// Ask the Rust side what the native window actually looks like after configuration.
-async function report() {
-  const target = document.getElementById("report");
+function pointerLeft() {
+  clearTimers();
+  document.body.dataset.hover = "false";
+  if (!current || !current.metrics.expanded) return;
+  if (current.settings.isPinned) return;
+  closeTimer = setTimeout(() => panel.close(), current.settings.closeDelay * 1000);
+}
+
+// Drag the handle to slide the panel along its edge, or across the midpoint of the
+// display to re-dock it. A press that never moves is a tap, which opens the panel.
+function onMouseDown(event) {
+  if (event.button !== 0) return;
+  if (current?.metrics.expanded && !event.target.closest("#drag-grip")) return;
+  dragStart = { x: event.screenX, y: event.screenY, moved: false };
+}
+
+function onMouseMove(event) {
+  if (!dragStart) return;
+  const distance = Math.max(
+    Math.abs(event.screenX - dragStart.x),
+    Math.abs(event.screenY - dragStart.y),
+  );
+  if (!dragStart.moved && distance > 4) {
+    dragStart.moved = true;
+    dragging = true;
+    clearTimers();
+    panel.beginDrag();
+  }
+  if (dragging) panel.drag();
+}
+
+function onMouseUp() {
+  if (!dragStart) return;
+  const wasDrag = dragStart.moved;
+  dragStart = null;
+  if (wasDrag) {
+    dragging = false;
+    hoverSuppressedUntil = Date.now() + 300;
+    panel.endDrag();
+    return;
+  }
+  if (!current) return;
+  if (!current.metrics.expanded && current.settings.activation !== "hotkeyOnly") {
+    panel.open();
+  }
+}
+
+function wire() {
+  document.addEventListener("mouseenter", pointerEntered);
+  document.addEventListener("mouseleave", pointerLeft);
+  document.addEventListener("mousedown", onMouseDown);
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") panel.close();
+  });
+
+  document.getElementById("close-button").addEventListener("click", () => {
+    hoverSuppressedUntil = Date.now() + 450;
+    panel.close();
+  });
+
+  document.getElementById("pin-button").addEventListener("click", () => {
+    if (!current) return;
+    const settings = { ...current.settings, isPinned: !current.settings.isPinned };
+    panel.updateSettings(settings);
+  });
+}
+
+async function start() {
+  await listen("panel-state", (event) => {
+    current = event.payload;
+    render();
+  });
+  await listen("ambient", (event) => {
+    ambient = { ...ambient, ...event.payload };
+    if (current && !current.metrics.expanded) render();
+  });
+
+  current = await panel.state();
+  render();
+  wire();
+
+  // The clock chip has no push source; a slow tick is cheaper than polling Rust.
+  setInterval(() => {
+    if (current && !current.metrics.expanded && current.metrics.showsContent) render();
+  }, 10_000);
+}
+
+// A frontend error would otherwise leave an empty transparent window, which is
+// indistinguishable from the panel simply not being there.
+const report = (what, detail) => {
   try {
-    const result = await window.__TAURI__.core.invoke("window_report");
-    target.textContent = JSON.stringify(result, null, 1);
-  } catch (error) {
-    target.textContent = `invoke failed: ${error}`;
+    invoke("log_frontend", { message: `${what}: ${detail}` });
+  } catch {
+    /* the bridge itself is gone; nothing useful left to do */
   }
-}
-report();
+};
+window.addEventListener("error", (event) => report("error", event.message));
+window.addEventListener("unhandledrejection", (event) => report("rejection", String(event.reason)));
+
+start().catch((error) => report("start failed", String(error?.stack ?? error)));

@@ -1,3 +1,7 @@
+[hidden] {
+  display: none !important;
+}
+
 :root {
   color-scheme: dark;
   --accent: #6e9bff;
@@ -5,11 +9,15 @@
   --text-secondary: rgba(255, 255, 255, 0.58);
   --text-tertiary: rgba(255, 255, 255, 0.36);
   --shell: #0b0c0f;
-  --hairline: rgba(255, 255, 255, 0.16);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --caution: #ffc46b;
+  --danger: #ff6b6b;
+  --good: #7fd1ae;
 }
 
-/* Nothing may paint a background: the window is transparent and the SVG shape is
-   the only thing that should be visible. */
+/* Nothing may paint a background: the window is transparent and the SVG shape is the
+   only thing that should be visible. */
 html,
 body {
   margin: 0;
@@ -25,11 +33,6 @@ body {
   cursor: default;
 }
 
-#panel {
-  position: absolute;
-  inset: 0;
-}
-
 #outline {
   position: absolute;
   inset: 0;
@@ -40,57 +43,209 @@ body {
 
 #shape {
   fill: var(--shell);
-  fill-opacity: 0.96;
   filter: url(#panel-shadow);
+  transition: fill-opacity 0.2s ease;
 }
 
 #hairline {
   fill: none;
-  stroke: var(--hairline);
+  stroke: var(--hairline-strong);
   stroke-width: 0.75;
+}
+
+/* Spans the whole window so the clip path's user-space coordinates line up with the
+   SVG that defined it. */
+#clip-layer {
+  position: absolute;
+  inset: 0;
+  clip-path: url(#panel-clip);
 }
 
 #content {
   position: absolute;
-  inset: 0;
-  /* Offset is applied from JS so it tracks the shadow margin. */
-  clip-path: url(#panel-clip);
-  padding: 14px 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Idle handle */
+.idle-handle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  opacity: 0.82;
+  transition: opacity 0.15s ease;
+}
+.idle-handle.stacked {
+  flex-direction: column;
+}
+body[data-hover="true"] .idle-handle {
+  opacity: 1;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  line-height: 1.05;
+}
+.chip.stacked {
+  flex-direction: column;
+  gap: 1px;
+}
+.chip .primary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chip-clock:not(.stacked) .primary {
+  font-size: 12px;
+}
+.chip .secondary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.chip .small {
+  font-size: 8px;
+}
+.chip .tertiary {
+  color: var(--text-tertiary);
+}
+.chip .glyph {
+  font-size: 9px;
+}
+.chip .value {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.chip.tone-caution .value,
+.chip.tone-caution .glyph {
+  color: var(--caution);
+}
+.chip.tone-danger .value,
+.chip.tone-danger .glyph {
+  color: var(--danger);
+}
+.chip.tone-good .value,
+.chip.tone-good .glyph {
+  color: var(--good);
+}
+.chip.tone-muted .value,
+.chip.tone-muted .glyph {
+  color: var(--text-tertiary);
+}
+
+.chip-icons {
+  display: flex;
+  gap: 7px;
+}
+.chip-icons.stacked {
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Three bars that animate only while something is actually playing — perpetual motion
+   in the corner of the eye is exhausting. */
+.chip-media {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+}
+.chip-media .bar {
+  width: 2px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--text-tertiary);
+}
+.chip-media .bar:nth-child(2) {
+  height: 7px;
+}
+.chip-media.playing .bar {
+  background: var(--accent);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+.chip-media.playing .bar:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.chip-media.playing .bar:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes pulse {
+  0%, 100% { height: 4px; }
+  50% { height: 11px; }
+}
+
+/* Open panel */
+#panel-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 14px;
   box-sizing: border-box;
 }
 
 header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  gap: 6px;
+  padding: 10px 0 9px;
+  border-bottom: 1px solid var(--hairline);
 }
-
-.dot {
+header .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
 }
-
-.title {
+header .title {
   font-size: 12px;
   font-weight: 600;
 }
-
-.spike-note {
-  margin: 12px 0 6px;
-  font-size: 10px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+header .spacer {
+  flex: 1;
+}
+header button {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: default;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+header button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+#drag-grip {
+  background: transparent;
+  cursor: grab;
+}
+#drag-grip:active {
+  cursor: grabbing;
 }
 
-#report {
-  margin: 0;
-  font: 10px ui-monospace, "SF Mono", Menlo, monospace;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  word-break: break-all;
+#widget-stack {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#widget-stack::-webkit-scrollbar {
+  width: 0;
 }

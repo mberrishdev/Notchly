@@ -108,6 +108,58 @@ mod imp {
         })
     }
 
+    /// Writes the panel's own window to a PNG, alpha intact.
+    ///
+    /// Capturing your own window needs no Screen Recording permission, which makes this
+    /// the only way to actually look at a surface that lives at the edge of the display.
+    pub fn capture_png(window: &WebviewWindow, path: &str) -> serde_json::Value {
+        use core_graphics::display::{
+            kCGWindowImageBoundsIgnoreFraming, kCGWindowListOptionIncludingWindow, CGDisplay,
+            CGRect,
+        };
+
+        let Ok(window_id) = window_number(window) else {
+            return serde_json::json!({ "error": "no window number" });
+        };
+        let image = CGDisplay::screenshot(
+            CGRect::new(
+                &core_graphics::geometry::CGPoint::new(f64::INFINITY, f64::INFINITY),
+                &core_graphics::geometry::CGSize::new(0.0, 0.0),
+            ),
+            kCGWindowListOptionIncludingWindow,
+            window_id as u32,
+            kCGWindowImageBoundsIgnoreFraming,
+        );
+        let Some(image) = image else {
+            return serde_json::json!({ "error": "capture returned nothing" });
+        };
+
+        let (width, height) = (image.width(), image.height());
+        let stride = image.bytes_per_row();
+        let data = image.data();
+        let bytes: &[u8] = &data;
+
+        // CoreGraphics hands back BGRA with its own row padding; PNG wants tight RGBA.
+        let mut rgba = Vec::with_capacity(width * height * 4);
+        for y in 0..height {
+            for x in 0..width {
+                let i = y * stride + x * 4;
+                match bytes.get(i..i + 4) {
+                    Some(px) => rgba.extend_from_slice(&[px[2], px[1], px[0], px[3]]),
+                    None => rgba.extend_from_slice(&[0, 0, 0, 0]),
+                }
+            }
+        }
+
+        match image::RgbaImage::from_raw(width as u32, height as u32, rgba) {
+            Some(buffer) => match buffer.save(path) {
+                Ok(()) => serde_json::json!({ "saved": path, "width": width, "height": height }),
+                Err(error) => serde_json::json!({ "error": error.to_string() }),
+            },
+            None => serde_json::json!({ "error": "buffer size mismatch" }),
+        }
+    }
+
     fn window_number(window: &WebviewWindow) -> Result<isize, ()> {
         let Some(handle) = ns_window(window) else { return Err(()) };
         unsafe { Ok(msg_send![handle, windowNumber]) }
@@ -168,6 +220,10 @@ mod imp {
         serde_json::json!({ "captured": false })
     }
 
+    pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
+        serde_json::json!({ "error": "capture is macOS only" })
+    }
+
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -181,6 +237,10 @@ mod imp {
     }
     pub fn sample_transparency(_window: &WebviewWindow) -> serde_json::Value {
         serde_json::json!({ "captured": false })
+    }
+
+    pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
+        serde_json::json!({ "error": "capture is macOS only" })
     }
 
 }
@@ -200,4 +260,10 @@ pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
 /// background. Capturing our *own* window needs no Screen Recording permission.
 pub fn sample_transparency(window: &WebviewWindow) -> serde_json::Value {
     imp::sample_transparency(window)
+}
+
+/// Saves a PNG of the panel window. A development aid — the panel only ever appears at
+/// the edge of a live display, which makes it awkward to inspect any other way.
+pub fn capture_png(window: &WebviewWindow, path: &str) -> serde_json::Value {
+    imp::capture_png(window, path)
 }

@@ -6,28 +6,37 @@
   <link rel="stylesheet" href="styles/panel.css" />
 </head>
 <body>
-  <!-- The panel is drawn as an SVG shape on a transparent page, so the concave
-       corners are real geometry rather than a rounded rectangle pretending. -->
-  <div id="panel">
-    <svg id="outline" aria-hidden="true">
-      <defs>
-        <clipPath id="panel-clip"><path id="clip-path" /></clipPath>
-        <filter id="panel-shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="-8" dy="4" stdDeviation="12" flood-color="#000" flood-opacity="0.5" />
-        </filter>
-      </defs>
-      <path id="shape" />
-      <path id="hairline" />
-    </svg>
+  <!-- The panel is an SVG shape on a transparent page, so the concave corners are real
+       geometry rather than a rounded rectangle pretending to be a notch. -->
+  <svg id="outline" aria-hidden="true">
+    <defs>
+      <clipPath id="panel-clip"><path id="clip-path" /></clipPath>
+      <filter id="panel-shadow" x="-60%" y="-60%" width="220%" height="220%">
+        <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.45" />
+      </filter>
+    </defs>
+    <path id="shape" />
+    <path id="hairline" />
+  </svg>
+
+  <div id="clip-layer">
     <div id="content">
+    <div id="idle-handle" class="idle-handle" hidden></div>
+
+    <section id="panel-body" hidden>
       <header>
         <span class="dot"></span>
         <span class="title">Notchly</span>
+        <button id="drag-grip" title="Drag to move the panel to another edge">≡</button>
+        <span class="spacer"></span>
+        <button id="pin-button" title="Keep the panel open">⌖</button>
+        <button id="close-button" title="Close">✕</button>
       </header>
-      <p class="spike-note">Phase&nbsp;0 spike</p>
-      <pre id="report">checking window…</pre>
+      <div id="widget-stack"></div>
+    </section>
     </div>
   </div>
+
   <script type="module" src="main.js"></script>
 </body>
 </html>
