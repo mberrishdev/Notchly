@@ -41,16 +41,16 @@ parts where a silent mistake would be invisible on screen; the views are not tes
 ## Layout
 
 Two top-level source trees, because there are two programs: a Rust binary that owns the
-window and a web page that draws inside it. Tauri's own convention names the Rust half
-`src-tauri`; the other half is `ui` rather than `src` so the pair reads as two different
-things rather than a duplicate.
+window, and a web page that draws inside it. Named `core` and `ui` rather than Tauri's
+default `src-tauri` and a bare `src`, which read as a duplicate rather than a split.
+The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is free.
 
 - `ui/` — the frontend, running inside the webview. `main.js` is the state machine;
   `lib/notch-shape.js` builds the outline; `lib/panel-view.js` paints and animates it;
   `lib/widget-host.js` hosts custom widgets and relays their bridge calls;
   `lib/widget-runtime.js` is injected into them; `settings.js` and
   `lib/settings-*.js` are the settings window
-- `src-tauri/src/` — the Rust core
+- `core/src/` — the Rust binary
   - `panel.rs` — the window and the open/close state machine
   - `geometry.rs` — settings + display → window frames, and `IdleHandleLayout`
   - `hover.rs` — the cursor watchdog behind hover-to-open
@@ -60,7 +60,7 @@ things rather than a duplicate.
   - `services/` — everything that talks to the system: metrics, media, clipboard,
     apps, notifications, and the sampling cadence in `ambient.rs`
   - `platform.rs` — per-platform native window behaviour
-- `src-tauri/resources/ExampleWidgets/` — bundled starter widgets, copied into the
+- `core/resources/ExampleWidgets/` — bundled starter widgets, copied into the
   user's widgets folder on first launch
 - `scripts/` — icon generators. They are Swift, and macOS-only, because they draw with
   AppKit; they are developer tools run by hand, not part of the build, so nothing about
@@ -76,7 +76,7 @@ things rather than a duplicate.
 ## Testing
 
 ```bash
-cd src-tauri && cargo test          # 59 tests, headless
+cd core && cargo test          # 59 tests, headless
 npx tauri build --bundles app       # release bundle
 ```
 

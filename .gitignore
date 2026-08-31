@@ -15,6 +15,6 @@ build/
 
 # Tauri / Node
 node_modules/
-src-tauri/target/
-src-tauri/gen/
+core/target/
+core/gen/
 dist/

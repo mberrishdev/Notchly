@@ -38,7 +38,7 @@ git clone https://github.com/mberrishdev/Notchly.git
 cd Notchly
 npm install
 npx tauri build --bundles app
-open src-tauri/target/release/bundle/macos/Notchly.app
+open core/target/release/bundle/macos/Notchly.app
 ```
 
 Or run it with hot reload while you work on it:
@@ -145,7 +145,7 @@ layout and the decisions that aren't up for relitigating. `docs/PORTING.md` reco
 this was ported from and which gaps are still open.
 
 ```bash
-cd src-tauri && cargo test    # 59 tests, headless
+cd core && cargo test    # 59 tests, headless
 ```
 
 ## License

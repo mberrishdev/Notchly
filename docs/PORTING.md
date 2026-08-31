@@ -124,7 +124,7 @@ the same screen edge and overlap.
 ```bash
 npm install
 npx tauri dev                 # or: npx tauri build --bundles app
-cd src-tauri && cargo test    # 54 tests, headless
+cd core && cargo test    # 54 tests, headless
 ```
 
 To look at the panel — which otherwise only exists at the edge of a live display —
@@ -132,7 +132,7 @@ the app will walk itself through its states and save a PNG of each:
 
 ```bash
 NOTCHLY_CAPTURE_DIR=/tmp/shots \
-  src-tauri/target/release/bundle/macos/Notchly.app/Contents/MacOS/notchly
+  core/target/release/bundle/macos/Notchly.app/Contents/MacOS/notchly
 ```
 
 The capture harness only works while the window server is actually compositing the
