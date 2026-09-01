@@ -105,6 +105,10 @@ my-widget/
   index.html
 ```
 
+Notchly ships four example widgets — a pomodoro, weather, a calendar (**Up Next**), and a
+shell command strip — copied into your widgets folder on first launch and meant to be read
+and pulled apart.
+
 Place it in the Notchly Widgets folder, or use **Settings > Custom Widgets > Create**.
 Notchly discovers the folder automatically and reloads it when its files change.
 

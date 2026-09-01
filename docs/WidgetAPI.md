@@ -161,12 +161,14 @@ ring) is injected as the *first* stylesheet, so any rule you write wins.
 
 ## Bundled examples
 
-Three ship with the app and are copied into your widgets folder on first launch. They
+Four ship with the app and are copied into your widgets folder on first launch. They
 are meant to be read and pulled apart:
 
 - **pomodoro** — declared settings, persistent storage, notifications. Stores an end
   timestamp rather than a countdown, so it stays correct across restarts.
 - **weather** — the network permission, using Open-Meteo with no API key.
+- **up-next** — parsing a real feed. Reads an iCalendar `.ics` URL and shows the next few
+  events, including recurring ones.
 - **command-strip** — the shell permission, including how to handle being denied it.
 
 Settings ▸ Custom Widgets ▸ **Reinstall Examples** restores them if you edit them into a
