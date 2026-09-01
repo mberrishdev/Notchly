@@ -15,7 +15,7 @@ to reposition, shows a configurable ambient strip while closed, hosts five built
 widgets plus any number of custom ones with hot reload, and has a five-pane settings
 window. Windows runtime behavior still needs validation on Windows hardware.
 
-71 Rust tests cover the notch geometry, window frames, drag placement, idle handle
+76 Rust tests cover the notch geometry, window frames, drag placement, idle handle
 sizing, settings decoding, permission gating, the widget manifest format, the widget
 protocol's path handling and content policy, the bridge's HTTP surface, and launcher
 search ranking. They are the parts where a silent mistake would be invisible on screen;
@@ -58,6 +58,8 @@ The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is f
   - `settings.rs` — the persisted model, with serde defaults for tolerant decoding
   - `widgets.rs`, `widget_protocol.rs`, `bridge.rs` — discovery, the `widget://`
     scheme with its per-widget CSP, and the `window.notchly` implementation
+  - `secrets.rs` — widget credentials in the OS store, so a `secret` setting never
+    reaches `settings.json`
   - `services/` — everything that talks to the system: metrics, media, clipboard,
     apps, notifications, and the sampling cadence in `ambient.rs`
   - `platform.rs` — per-platform native window behaviour
@@ -77,7 +79,7 @@ The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is f
 ## Testing
 
 ```bash
-cd core && cargo test          # 71 tests, headless
+cd core && cargo test          # 76 tests, headless
 npx tauri build --bundles app       # release bundle
 ```
 

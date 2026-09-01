@@ -52,7 +52,27 @@ so you can see errors without a console.
 Each entry becomes a real control in Notchly's settings window, and its value is
 readable from your widget through `notchly.settings`. Supported `type` values are
 `string`, `number` (with `minimum` / `maximum`), `boolean`, `select` (with `options`),
-and `color`. Add `help` for a line of explanatory text under the label.
+`color`, and `secret`. Add `help` for a line of explanatory text under the label.
+
+### `secret`
+
+For anything that is a credential rather than a preference — an API token, a webhook key:
+
+```json
+{ "key": "token", "type": "secret", "label": "GitHub token",
+  "help": "A fine-grained token with read access to the repos you want to watch." }
+```
+
+A `secret` is kept in the OS credential store — Keychain on macOS, Credential Manager on
+Windows — and never written to `settings.json`. It reads back through
+`notchly.settings.get('token')` exactly like any other setting, but only for the widget
+that declared it.
+
+The settings window never shows a stored secret back to anyone, the user included: the
+field reports *Stored* or *Not set* and offers to replace it. Saving an empty field
+deletes it. Nothing deletes a secret on its own — removing a widget's folder leaves the
+credential filed, because a folder that is briefly unreadable must not cost someone a
+token.
 
 This is the same mechanism the built-in widgets use — a folder you drop in gets exactly
 the same settings UI as Now Playing does.
@@ -81,9 +101,9 @@ are refused. A string `body` is sent as written, anything else is serialised as 
 gets a matching `Content-Type` unless you set one yourself. Every request times out after
 20 seconds, because a widget has no way to cancel its own.
 
-**Your token is stored in plain text.** Declared settings live in Notchly's settings
-file and `notchly.storage` is a JSON file beside it, neither encrypted. Ask for a token
-scoped as narrowly as the API allows.
+**Declare a token as a `secret`, not a `string`.** A `secret` goes to the OS credential
+store; every other setting, and everything in `notchly.storage`, is a plain JSON file on
+disk. Ask for a token scoped as narrowly as the API allows either way.
 
 Anything you call without the necessary permission **rejects with a message explaining
 which switch to flip**, so you can surface it to the user instead of rendering an empty

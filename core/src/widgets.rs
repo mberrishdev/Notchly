@@ -55,6 +55,14 @@ pub struct SettingField {
     pub maximum: Option<f64>,
 }
 
+impl SettingField {
+    /// A `secret` field is a credential, not a preference: it is kept in the OS
+    /// credential store and never written to `settings.json`.
+    pub fn is_secret(&self) -> bool {
+        self.kind == "secret"
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
@@ -88,6 +96,16 @@ pub struct Manifest {
 impl Manifest {
     pub fn entry_file(&self) -> &str {
         self.entry.as_deref().unwrap_or("index.html")
+    }
+
+    /// Declared setting keys that hold credentials rather than preferences.
+    pub fn secret_keys(&self) -> Vec<String> {
+        self.settings
+            .iter()
+            .flatten()
+            .filter(|field| field.is_secret())
+            .map(|field| field.key.clone())
+            .collect()
     }
 }
 
@@ -366,6 +384,30 @@ mod tests {
             assert!(!package.manifest.id.is_empty());
             assert!(!package.manifest.name.is_empty());
         }
+    }
+
+    #[test]
+    fn a_secret_field_is_named_as_one() {
+        let root = temp();
+        write_widget(
+            &root,
+            "a",
+            r#"{ "id": "a.b", "name": "T", "settings": [
+                 { "key": "token", "label": "Token", "type": "secret" },
+                 { "key": "city", "label": "City", "type": "string" } ] }"#,
+            Some("index.html"),
+        );
+        let catalog = scan(&root, &HashMap::new());
+        let manifest = &catalog.packages[0].manifest;
+        assert_eq!(manifest.secret_keys(), vec!["token".to_string()]);
+    }
+
+    #[test]
+    fn a_manifest_without_secrets_names_none() {
+        let root = temp();
+        write_widget(&root, "a", r#"{ "id": "a.b", "name": "T" }"#, Some("index.html"));
+        let catalog = scan(&root, &HashMap::new());
+        assert!(catalog.packages[0].manifest.secret_keys().is_empty());
     }
 
     #[test]
