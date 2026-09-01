@@ -205,15 +205,80 @@ pub fn scan(root: &Path, revisions: &std::collections::HashMap<String, u64>) -> 
     catalog
 }
 
-/// Copies the bundled starter widgets in on first launch, so the folder is never an
-/// empty void the user has to guess at.
+/// The examples that shipped before the marker recorded names. Every build that wrote a
+/// zero-byte marker bundled exactly these, so an old marker means these three were the
+/// ones offered — and re-seeding them would resurrect any the user had deleted.
+const ORIGINAL_EXAMPLES: [&str; 3] = ["command-strip", "pomodoro", "weather"];
+
+/// The marker's filename. Its *contents* are the names already offered to the user.
+const SEEDED_MARKER: &str = ".examples-installed";
+
+/// Examples the user has already been offered, read from the marker.
+///
+/// `None` is a folder with no marker at all — a fresh install, owed everything. An
+/// unparsable marker is the pre-0.6.3 format, which recorded only that seeding had
+/// happened, never what was seeded.
+fn seeded_names(marker: Option<&str>) -> Vec<String> {
+    match marker {
+        None => Vec::new(),
+        Some(text) => serde_json::from_str::<Vec<String>>(text)
+            .unwrap_or_else(|_| ORIGINAL_EXAMPLES.iter().map(|name| (*name).to_string()).collect()),
+    }
+}
+
+/// Bundled examples the user has never been offered, and so is owed.
+fn unseeded(bundled: &[String], seeded: &[String]) -> Vec<String> {
+    bundled.iter().filter(|name| !seeded.contains(name)).cloned().collect()
+}
+
+/// Directory names of the bundled examples, sorted so the record is stable.
+fn bundled_examples(resource_dir: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(resource_dir.join("ExampleWidgets")) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter(|entry| entry.path().is_dir())
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .collect();
+    names.sort();
+    names
+}
+
+/// Copies in any bundled example the user has not been offered before.
+///
+/// Runs on every launch rather than only the first, so an example added in a later
+/// release still arrives. The marker records *which* examples have been offered, which
+/// is what keeps one the user deleted from coming back the next time the app starts.
 pub fn seed_examples(resource_dir: &Path, target: &Path) -> usize {
-    let marker = target.join(".examples-installed");
-    if marker.exists() {
+    let bundled = bundled_examples(resource_dir);
+    if bundled.is_empty() {
         return 0;
     }
-    let copied = copy_examples(resource_dir, target, false);
-    let _ = std::fs::write(marker, b"");
+    let marker = target.join(SEEDED_MARKER);
+    let existing = std::fs::read_to_string(&marker).ok();
+    let mut seeded = seeded_names(existing.as_deref());
+
+    let source = resource_dir.join("ExampleWidgets");
+    let mut copied = 0;
+    for name in unseeded(&bundled, &seeded) {
+        let destination = target.join(&name);
+        // A folder already there is the user's, not ours to overwrite — but it still
+        // counts as offered, so we do not try again on the next launch.
+        if !destination.exists() && copy_dir(&source.join(&name), &destination).is_ok() {
+            copied += 1;
+        }
+    }
+
+    for name in bundled {
+        if !seeded.contains(&name) {
+            seeded.push(name);
+        }
+    }
+    seeded.sort();
+    if let Ok(text) = serde_json::to_string(&seeded) {
+        let _ = std::fs::write(&marker, text);
+    }
     copied
 }
 
@@ -366,6 +431,94 @@ mod tests {
         if let Some(entry) = entry {
             std::fs::write(folder.join(entry), "<html></html>").unwrap();
         }
+    }
+
+    /// Builds a stand-in for the bundled resource directory.
+    fn examples_dir(names: &[&str]) -> PathBuf {
+        let resources = temp();
+        let source = resources.join("ExampleWidgets");
+        for name in names {
+            write_widget(&source, name, r#"{ "id": "x", "name": "X" }"#, Some("index.html"));
+        }
+        resources
+    }
+
+    #[test]
+    fn a_folder_with_no_marker_is_owed_everything() {
+        assert!(seeded_names(None).is_empty());
+    }
+
+    #[test]
+    fn a_zero_byte_marker_means_the_three_originals() {
+        assert_eq!(seeded_names(Some("")), ORIGINAL_EXAMPLES.to_vec());
+    }
+
+    #[test]
+    fn a_recorded_marker_is_read_back() {
+        assert_eq!(seeded_names(Some(r#"["a","b"]"#)), vec!["a".to_string(), "b".to_string()]);
+    }
+
+    #[test]
+    fn only_unoffered_examples_are_owed() {
+        let bundled = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let seeded = vec!["b".to_string()];
+        assert_eq!(unseeded(&bundled, &seeded), vec!["a".to_string(), "c".to_string()]);
+    }
+
+    #[test]
+    fn a_first_launch_seeds_every_example() {
+        let resources = examples_dir(&["alpha", "beta"]);
+        let widgets = temp();
+        assert_eq!(seed_examples(&resources, &widgets), 2);
+        assert!(widgets.join("alpha").exists());
+        assert!(widgets.join("beta").exists());
+    }
+
+    /// The reason the marker exists at all.
+    #[test]
+    fn a_deleted_example_is_not_resurrected() {
+        let resources = examples_dir(&["alpha", "beta"]);
+        let widgets = temp();
+        seed_examples(&resources, &widgets);
+        std::fs::remove_dir_all(widgets.join("alpha")).unwrap();
+
+        assert_eq!(seed_examples(&resources, &widgets), 0);
+        assert!(!widgets.join("alpha").exists());
+    }
+
+    /// The bug this replaced: a marker said "seeded", so nothing new ever arrived.
+    #[test]
+    fn an_example_added_in_a_later_release_still_arrives() {
+        let widgets = temp();
+        seed_examples(&examples_dir(&["alpha"]), &widgets);
+        assert!(!widgets.join("beta").exists());
+
+        assert_eq!(seed_examples(&examples_dir(&["alpha", "beta"]), &widgets), 1);
+        assert!(widgets.join("beta").exists());
+    }
+
+    /// An install predating the recorded marker owns those three already, but is still
+    /// owed anything bundled since.
+    #[test]
+    fn a_legacy_marker_seeds_only_what_came_after_it() {
+        let widgets = temp();
+        std::fs::write(widgets.join(SEEDED_MARKER), b"").unwrap();
+        let resources = examples_dir(&["command-strip", "pomodoro", "weather", "up-next"]);
+
+        assert_eq!(seed_examples(&resources, &widgets), 1);
+        assert!(widgets.join("up-next").exists());
+        assert!(!widgets.join("weather").exists(), "an original was resurrected");
+    }
+
+    #[test]
+    fn a_users_own_folder_is_never_overwritten_but_counts_as_offered() {
+        let widgets = temp();
+        write_widget(&widgets, "alpha", r#"{ "id": "mine", "name": "Mine" }"#, Some("index.html"));
+        let resources = examples_dir(&["alpha"]);
+
+        assert_eq!(seed_examples(&resources, &widgets), 0);
+        let manifest = std::fs::read_to_string(widgets.join("alpha/widget.json")).unwrap();
+        assert!(manifest.contains("mine"), "the user's own widget was overwritten");
     }
 
     /// The examples are copied into the user's folder on first launch, so a typo in one
