@@ -142,8 +142,12 @@ fn list_displays(app: AppHandle) -> Vec<String> {
 }
 
 /// Opens the settings window, or brings it forward if it already exists.
-#[tauri::command]
-fn open_settings(app: AppHandle) -> Result<(), String> {
+///
+/// Must never run on the main thread. On Windows `build()` blocks until the event loop
+/// has created the window, so calling it from the loop's own thread deadlocks: the
+/// window appears but its WebView2 never finishes navigating, leaving it blank white.
+/// Every caller either awaits this from the async runtime or is already off-thread.
+fn build_settings_window(app: &AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("settings") {
         let _ = window.show();
         let _ = window.unminimize();
@@ -151,7 +155,7 @@ fn open_settings(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
     tauri::WebviewWindowBuilder::new(
-        &app,
+        app,
         "settings",
         tauri::WebviewUrl::App("settings.html".into()),
     )
@@ -160,9 +164,17 @@ fn open_settings(app: AppHandle) -> Result<(), String> {
     .min_inner_size(660.0, 520.0)
     .resizable(true)
     .center()
+    .focused(true)
     .build()
     .map(|_| ())
     .map_err(|error| error.to_string())
+}
+
+/// `async` so Tauri runs it on the async runtime rather than the main thread — see
+/// `build_settings_window`.
+#[tauri::command]
+async fn open_settings(app: AppHandle) -> Result<(), String> {
+    build_settings_window(&app)
 }
 
 #[tauri::command]
@@ -225,7 +237,11 @@ pub fn handle_tray_action(app: &AppHandle, id: &str) {
             let _ = tauri_plugin_opener::open_path(path, None::<&str>);
         }
         "settings" => {
-            let _ = open_settings(app.clone());
+            // Off the main thread: the tray handler runs on the event loop.
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = build_settings_window(&app);
+            });
         }
         "login" => {
             let enable = !panel::with_state(app, |state| state.settings.launch_at_login)
@@ -413,10 +429,8 @@ fn run_capture_pass(app: AppHandle, dir: String) {
     shot("open");
 
     // Walk the settings window's tabs too; it is the only other surface with layout.
-    let settings_app = app.clone();
-    let _ = app.run_on_main_thread(move || {
-        let _ = open_settings(settings_app);
-    });
+    // Already on the capture thread, which is what `build_settings_window` needs.
+    let _ = build_settings_window(&app);
     std::thread::sleep(std::time::Duration::from_millis(1800));
     for tab in ["general", "appearance", "widgets", "custom"] {
         let selector = app.clone();
