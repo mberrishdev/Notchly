@@ -7,6 +7,7 @@ mod platform;
 mod services;
 mod tray;
 mod updates;
+mod secrets;
 mod widget_protocol;
 mod widgets;
 mod settings;
@@ -84,7 +85,8 @@ fn end_drag(app: AppHandle) {
 }
 
 #[tauri::command]
-fn update_settings(app: AppHandle, settings: Settings) {
+fn update_settings(app: AppHandle, mut settings: Settings) {
+    strip_secrets(&app, &mut settings);
     let Some(expanded) = panel::with_state(&app, |state| {
         state.settings = settings.clone();
         state.expanded
@@ -93,6 +95,52 @@ fn update_settings(app: AppHandle, settings: Settings) {
     };
     settings.save();
     panel::refresh(&app, expanded);
+}
+
+/// Drops any `secret` setting that arrived among the preferences before they are saved.
+///
+/// The settings window routes secrets through `set_widget_secret` and never puts one
+/// here, so this is a backstop rather than a path: it is what keeps a credential out of
+/// `settings.json` if a widget changes a field to `secret` after a value was already
+/// stored, or if some future caller forgets.
+fn strip_secrets(app: &AppHandle, settings: &mut Settings) {
+    let Some(catalog) = panel::with_state(app, |state| state.catalog.clone()) else {
+        return;
+    };
+    for slot in &mut settings.slots {
+        let Some(package) = catalog.package(&slot.widget_id) else {
+            continue;
+        };
+        for key in package.manifest.secret_keys() {
+            slot.preferences.remove(&key);
+        }
+    }
+}
+
+/// Files a widget's credential in the OS store. An empty value clears it.
+#[tauri::command]
+fn set_widget_secret(app: AppHandle, widget_id: String, key: String, value: String) -> Result<(), String> {
+    secrets::set(&widget_id, &key, &value)?;
+    // The widget is reading its settings on load, so it needs to see the new value.
+    panel::bump_revision(&app, &widget_id);
+    Ok(())
+}
+
+/// Which of a widget's secrets are filed — never their values, so the settings window
+/// can show "Set" without ever reading a credential back out of the store.
+#[tauri::command]
+fn widget_secrets_set(app: AppHandle, widget_id: String) -> Vec<String> {
+    panel::with_state(&app, |state| state.catalog.clone())
+        .and_then(|catalog| catalog.package(&widget_id).cloned())
+        .map(|package| {
+            package
+                .manifest
+                .secret_keys()
+                .into_iter()
+                .filter(|key| secrets::is_set(&widget_id, key))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[tauri::command]
@@ -337,7 +385,9 @@ pub fn run() {
             reload_all_widgets,
             app_version,
             check_update,
-            install_update
+            install_update,
+            set_widget_secret,
+            widget_secrets_set
         ])
         .setup(move |app| {
             // Notchly is an accessory app: no Dock tile, just the panel.

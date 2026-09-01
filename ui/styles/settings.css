@@ -147,6 +147,17 @@ input[type="text"], select {
   padding: 4px 8px;
   min-width: 160px;
 }
+.secret-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.secret-row input { min-width: 130px; }
+.secret-status {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
 input[type="range"] {
   width: 170px;
   accent-color: var(--accent);

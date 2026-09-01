@@ -30,6 +30,10 @@ tauri-plugin-notification = "2"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# The OS credential store, so widget tokens never touch settings.json. Version 3 rather
+# than 4: 4 requires Rust 1.88 and would drag this crate's MSRV up with it. The two
+# native features are the documented cross-platform pairing; each is inert off-target.
+keyring = { version = "3", default-features = false, features = ["apple-native", "windows-native"] }
 
 [features]
 # The `NOTCHLY_CAPTURE_DIR` screenshot harness is a developer tool. Off by default, so a

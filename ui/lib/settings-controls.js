@@ -62,6 +62,45 @@ export function select(options, current, onChange) {
   return node;
 }
 
+/**
+ * A credential field. It never shows what is stored — the store is write-only from
+ * here — so the control reports whether something is filed and offers to replace it.
+ * Emptying the box and saving is how a secret is deleted.
+ */
+function secretInput(secret) {
+  const row = el("div", "secret-row");
+  const input = el("input");
+  input.type = "password";
+  input.autocomplete = "off";
+  input.placeholder = "Paste a token";
+
+  const status = el("span", "secret-status", "Checking…");
+  const save = el("button", "action", "Save");
+
+  const show = (stored) => {
+    status.textContent = stored ? "Stored" : "Not set";
+    input.placeholder = stored ? "Stored — type to replace" : "Paste a token";
+  };
+  secret?.isSet?.().then(show).catch(() => show(false));
+
+  save.addEventListener("click", async () => {
+    const entered = input.value;
+    save.disabled = true;
+    try {
+      await secret?.onSave?.(entered);
+      input.value = "";
+      show(entered.length > 0);
+    } catch (error) {
+      status.textContent = String(error);
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  row.append(input, save, status);
+  return row;
+}
+
 function textInput(value, onChange, placeholder) {
   const input = el("input");
   input.type = "text";
@@ -93,9 +132,11 @@ export function group(title, children, footnote) {
  * Built-ins and custom widgets both come through here, so a folder the user drops in
  * gets exactly the same controls as Now Playing.
  */
-export function schemaField(spec, current, onChange) {
+export function schemaField(spec, current, onChange, secret) {
   const value = current ?? spec.default;
   switch (spec.type) {
+    case "secret":
+      return field(spec.label, spec.help, secretInput(secret));
     case "boolean":
       return field(spec.label, spec.help, toggle(value === true, onChange));
     case "number":

@@ -47,9 +47,15 @@ fn write_storage(widget_id: &str, data: &serde_json::Map<String, Value>) {
 /// A widget's declared settings: schema defaults, overlaid with what the user chose.
 pub fn widget_settings(app: &AppHandle, widget_id: &str) -> serde_json::Map<String, Value> {
     let mut values = serde_json::Map::new();
+    let mut secret_keys: Vec<String> = Vec::new();
     if let Some(catalog) = panel::with_state(app, |state| state.catalog.clone()) {
         if let Some(package) = catalog.package(widget_id) {
+            secret_keys = package.manifest.secret_keys();
             for field in package.manifest.settings.iter().flatten() {
+                // A secret has no default worth carrying: it is either filed or absent.
+                if field.is_secret() {
+                    continue;
+                }
                 if let Some(default) = &field.default_value {
                     values.insert(field.key.clone(), default.clone());
                 }
@@ -67,7 +73,20 @@ pub fn widget_settings(app: &AppHandle, widget_id: &str) -> serde_json::Map<Stri
     .flatten()
     {
         for (key, value) in preferences {
+            // Refuse a secret's value from settings.json even if one is somehow there —
+            // a widget that changed a field from `string` to `secret` would otherwise go
+            // on reading the plaintext copy the user thought they had replaced.
+            if secret_keys.contains(&key) {
+                continue;
+            }
             values.insert(key, value);
+        }
+    }
+    // The widget's own credentials, from the OS store. Widgets are isolated by id, so
+    // this only ever hands a secret back to the widget that owns it.
+    for key in secret_keys {
+        if let Some(secret) = crate::secrets::get(widget_id, &key) {
+            values.insert(key, Value::String(secret));
         }
     }
     values

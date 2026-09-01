@@ -73,12 +73,26 @@ function settingsForm(ctx, descriptor) {
   const slot = ctx.settings.slots.find((s) => s.widgetId === descriptor.id);
   for (const spec of descriptor.settings) {
     const current = slot?.preferences?.[spec.key];
+    // A secret bypasses preferences entirely: it goes to the OS credential store, so
+    // it must never travel through `commit` and into settings.json.
+    const secret = spec.type === "secret"
+      ? {
+          // Asked for rather than passed in, so rendering stays synchronous and the
+          // answer comes from the credential store rather than from any cached copy.
+          isSet: async () =>
+            (await invoke("widget_secrets_set", { widgetId: descriptor.id }).catch(() => []))
+              .includes(spec.key),
+          onSave: (value) =>
+            invoke("set_widget_secret", { widgetId: descriptor.id, key: spec.key, value }),
+        }
+      : undefined;
     wrap.append(
       schemaField(spec, current, (value) =>
         ctx.commit((s) => {
           const target = s.slots.find((item) => item.widgetId === descriptor.id);
           if (target) target.preferences = { ...target.preferences, [spec.key]: value };
         }),
+        secret,
       ),
     );
   }
