@@ -71,6 +71,20 @@ Widgets are offline until network access is granted, and that's enforced with a 
 blocker rather than a convention — a widget that hasn't been granted it cannot reach the
 network even by loading a remote `<script>`.
 
+`headers` is an object of strings, and `Authorization` is yours to set — that is how a
+widget talks to an API that needs a token. Six headers describe the connection rather
+than the request and are refused: `Connection`, `Host`, `Proxy-Authorization`,
+`Proxy-Connection`, `Transfer-Encoding` and `Upgrade`.
+
+`request` takes `GET`, `HEAD`, `POST`, `PUT`, `PATCH` or `DELETE`; `CONNECT` and `TRACE`
+are refused. A string `body` is sent as written, anything else is serialised as JSON and
+gets a matching `Content-Type` unless you set one yourself. Every request times out after
+20 seconds, because a widget has no way to cancel its own.
+
+**Your token is stored in plain text.** Declared settings live in Notchly's settings
+file and `notchly.storage` is a JSON file beside it, neither encrypted. Ask for a token
+scoped as narrowly as the API allows.
+
 Anything you call without the necessary permission **rejects with a message explaining
 which switch to flip**, so you can surface it to the user instead of rendering an empty
 box. The `command-strip` example does exactly that.
@@ -103,8 +117,10 @@ await notchly.media.previous()
 await notchly.clipboard.history(20)
 await notchly.clipboard.write('text')
 
-await notchly.http.get(url, headers)    // { status, body }
-await notchly.http.json(url, headers)
+await notchly.http.get(url, headers)       // { status, body }
+await notchly.http.json(url, headers)      // the same, parsed
+await notchly.http.post(url, body, headers)
+await notchly.http.request({ url, method, headers, body })
 
 await notchly.shell.run('uptime', 8)    // { code, stdout, stderr }
 

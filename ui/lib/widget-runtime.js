@@ -79,6 +79,9 @@
     http: {
       get: (url, headers) => post("http.get", { url, headers }),
       json: async (url, headers) => JSON.parse((await post("http.get", { url, headers })).body),
+      // { url, method, headers, body } — a non-string body is sent as JSON.
+      request: (options) => post("http.request", options ?? {}),
+      post: (url, body, headers) => post("http.request", { url, method: "POST", body, headers }),
     },
     open: (url) => post("open.url", { url }),
     notify: (title, body) => post("notify", { title, body }),
