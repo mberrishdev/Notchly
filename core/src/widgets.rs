@@ -350,6 +350,24 @@ mod tests {
         }
     }
 
+    /// The examples are copied into the user's folder on first launch, so a typo in one
+    /// of them is a broken widget for everybody rather than a broken test for us.
+    #[test]
+    fn every_bundled_example_scans_without_failures() {
+        let examples = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/ExampleWidgets");
+        let catalog = scan(&examples, &HashMap::new());
+        assert!(catalog.failures.is_empty(), "{:?}", catalog.failures);
+        assert!(
+            catalog.packages.len() >= 4,
+            "expected the bundled examples, found {}",
+            catalog.packages.len()
+        );
+        for package in &catalog.packages {
+            assert!(!package.manifest.id.is_empty());
+            assert!(!package.manifest.name.is_empty());
+        }
+    }
+
     #[test]
     fn minimal_manifest_loads_and_defaults_the_entry_file() {
         let root = temp();

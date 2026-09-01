@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { padding: 4px 2px; }
+    .event {
+      display: grid; grid-template-columns: 46px 1fr; gap: 10px;
+      padding: 7px 0; border-top: 1px solid var(--notchly-hairline);
+    }
+    .event:first-child { border-top: 0; padding-top: 2px; }
+    .when {
+      font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;
+      color: var(--notchly-text); padding-top: 1px;
+    }
+    .when.soon { color: var(--notchly-accent); }
+    .rel { font-size: 9px; font-weight: 400; color: var(--notchly-text-tertiary); margin-top: 1px; }
+    .what { min-width: 0; }
+    .title {
+      font-size: 11.5px; color: var(--notchly-text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .where {
+      font-size: 9.5px; color: var(--notchly-text-secondary); margin-top: 1px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
+    .status.error { color: #FF8A9B; text-align: left; }
+  </style>
+</head>
+<body>
+  <div id="status" class="status">Loading…</div>
+  <div id="events" hidden></div>
+
+  <script>
+    (async () => {
+      const el = (id) => document.getElementById(id);
+
+      // --- iCalendar ------------------------------------------------------------
+      //
+      // Enough of RFC 5545 to answer "what's next", and no more. Recurrence covers
+      // DAILY, WEEKLY and MONTHLY with INTERVAL, COUNT, UNTIL, BYDAY and EXDATE —
+      // which is what standing meetings actually use. BYMONTHDAY, BYSETPOS and the
+      // rest are not expanded, so an exotic rule shows only its first occurrence.
+
+      /** Rejoins folded lines: a leading space or tab continues the line before it. */
+      function unfold(text) {
+        return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '');
+      }
+
+      function unescapeText(value) {
+        return value
+          .replace(/\\n/gi, ' ')
+          .replace(/\\,/g, ',')
+          .replace(/\\;/g, ';')
+          .replace(/\\\\/g, '\\');
+      }
+
+      /**
+       * Offset in minutes between a named zone and UTC, at a given instant.
+       * `Intl` is the only tz database a webview has, so ask it what the wall clock
+       * reads there and take the difference.
+       */
+      function zoneOffset(zone, date) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: zone, hour12: false,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+          }).formatToParts(date).reduce((all, part) => (all[part.type] = part.value, all), {});
+          const asUtc = Date.UTC(
+            Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+            Number(parts.hour % 24), Number(parts.minute), Number(parts.second),
+          );
+          return (asUtc - date.getTime()) / 60000;
+        } catch {
+          return 0; // Unknown zone: treat it as UTC rather than dropping the event.
+        }
+      }
+
+      /** One DTSTART/DTEND/EXDATE value to a Date, honouring Z, TZID and all-day. */
+      function parseWhen(value, params) {
+        const match = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+        if (!match) return null;
+        const [, y, mo, d, h = '0', mi = '0', s = '0', zulu] = match;
+        const allDay = params.VALUE === 'DATE' || h === '0' && !value.includes('T');
+
+        if (zulu) {
+          return { date: new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)), allDay };
+        }
+        if (params.TZID) {
+          // Guess at UTC, then correct by the zone's offset at roughly that instant.
+          const guess = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+          const offset = zoneOffset(params.TZID, guess);
+          return { date: new Date(guess.getTime() - offset * 60000), allDay };
+        }
+        // Floating time, or an all-day date: the user's own clock is the right frame.
+        return { date: new Date(+y, +mo - 1, +d, +h, +mi, +s), allDay };
+      }
+
+      /** Splits `DTSTART;TZID=Europe/Tbilisi:20260901T090000` into its three parts. */
+      function parseLine(line) {
+        const colon = line.indexOf(':');
+        if (colon === -1) return null;
+        const [name, ...rawParams] = line.slice(0, colon).split(';');
+        const params = {};
+        for (const chunk of rawParams) {
+          const equals = chunk.indexOf('=');
+          if (equals !== -1) params[chunk.slice(0, equals).toUpperCase()] = chunk.slice(equals + 1);
+        }
+        return { name: name.toUpperCase(), params, value: line.slice(colon + 1) };
+      }
+
+      const WEEKDAYS = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+
+      /** Occurrences of one event that land inside [from, until]. */
+      function occurrences(event, from, until) {
+        const start = event.start.date;
+        const inWindow = (date) => date >= from && date <= until;
+        if (!event.rrule) return inWindow(start) ? [start] : [];
+
+        const rule = {};
+        for (const part of event.rrule.split(';')) {
+          const [key, value] = part.split('=');
+          if (key) rule[key.toUpperCase()] = value;
+        }
+        const freq = rule.FREQ;
+        const interval = Math.max(1, Number(rule.INTERVAL) || 1);
+        const count = Number(rule.COUNT) || Infinity;
+        const ruleEnd = rule.UNTIL ? parseWhen(rule.UNTIL, {})?.date ?? until : until;
+        const stopAt = ruleEnd < until ? ruleEnd : until;
+        const byDay = rule.BYDAY
+          ? rule.BYDAY.split(',').map((d) => WEEKDAYS[d.slice(-2)]).filter((d) => d !== undefined)
+          : null;
+
+        const found = [];
+        const cursor = new Date(start);
+        // Bounded so a malformed or endless rule cannot spin: a month of daily
+        // events, or a year of weekly ones, is far past what "up next" needs.
+        for (let step = 0; step < 400 && found.length < count; step += 1) {
+          if (cursor > stopAt) break;
+
+          if (freq === 'WEEKLY' && byDay) {
+            // Walk the days of this week, keeping the event's own time of day.
+            const weekStart = new Date(cursor);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            for (const day of byDay) {
+              const candidate = new Date(weekStart);
+              candidate.setDate(weekStart.getDate() + day);
+              candidate.setHours(start.getHours(), start.getMinutes(), 0, 0);
+              if (candidate >= start && candidate <= stopAt && inWindow(candidate)) {
+                found.push(new Date(candidate));
+              }
+            }
+          } else if (inWindow(cursor)) {
+            found.push(new Date(cursor));
+          }
+
+          if (freq === 'DAILY') cursor.setDate(cursor.getDate() + interval);
+          else if (freq === 'WEEKLY') cursor.setDate(cursor.getDate() + 7 * interval);
+          else if (freq === 'MONTHLY') cursor.setMonth(cursor.getMonth() + interval);
+          else if (freq === 'YEARLY') cursor.setFullYear(cursor.getFullYear() + interval);
+          else break; // An unrecognised FREQ: the first occurrence is all we can honour.
+        }
+
+        const skipped = new Set(event.exdates.map((date) => date.getTime()));
+        return found.filter((date) => !skipped.has(date.getTime())).sort((a, b) => a - b);
+      }
+
+      /** Every VEVENT in the feed, flattened into dated occurrences. */
+      function readCalendar(text, from, until) {
+        const events = [];
+        let current = null;
+
+        for (const line of unfold(text).split('\n')) {
+          if (line === 'BEGIN:VEVENT') {
+            current = { summary: '', location: '', rrule: null, start: null, exdates: [] };
+            continue;
+          }
+          if (line === 'END:VEVENT') {
+            if (current?.start) events.push(current);
+            current = null;
+            continue;
+          }
+          if (!current) continue;
+
+          const parsed = parseLine(line);
+          if (!parsed) continue;
+          switch (parsed.name) {
+            case 'SUMMARY': current.summary = unescapeText(parsed.value); break;
+            case 'LOCATION': current.location = unescapeText(parsed.value); break;
+            case 'RRULE': current.rrule = parsed.value; break;
+            case 'DTSTART': current.start = parseWhen(parsed.value, parsed.params); break;
+            case 'EXDATE':
+              for (const one of parsed.value.split(',')) {
+                const when = parseWhen(one, parsed.params);
+                if (when) current.exdates.push(when.date);
+              }
+              break;
+          }
+        }
+
+        return events
+          .flatMap((event) =>
+            occurrences(event, from, until).map((date) => ({
+              date,
+              allDay: event.start.allDay,
+              summary: event.summary || 'Busy',
+              location: event.location,
+            })),
+          )
+          .sort((a, b) => a.date - b.date);
+      }
+
+      // --- presentation ---------------------------------------------------------
+
+      function relative(date, now) {
+        const minutes = Math.round((date - now) / 60000);
+        if (minutes < 1) return 'now';
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.round(minutes / 60);
+        if (hours < 24) return `${hours}h`;
+        return `${Math.round(hours / 24)}d`;
+      }
+
+      function clock(date) {
+        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      }
+
+      function fail(message) {
+        el('status').textContent = message;
+        el('status').className = 'status error';
+        el('status').hidden = false;
+        el('events').hidden = true;
+      }
+
+      function say(message) {
+        el('status').textContent = message;
+        el('status').className = 'status';
+        el('status').hidden = false;
+        el('events').hidden = true;
+      }
+
+      function render(entries, now) {
+        const list = el('events');
+        list.replaceChildren();
+        for (const entry of entries) {
+          const row = document.createElement('div');
+          row.className = 'event';
+
+          const when = document.createElement('div');
+          when.className = 'when';
+          if (entry.date - now < 30 * 60000) when.className += ' soon';
+          when.textContent = entry.allDay ? 'all day' : clock(entry.date);
+          const rel = document.createElement('div');
+          rel.className = 'rel';
+          rel.textContent = relative(entry.date, now);
+          when.append(rel);
+
+          const what = document.createElement('div');
+          what.className = 'what';
+          const title = document.createElement('div');
+          title.className = 'title';
+          title.textContent = entry.summary;
+          what.append(title);
+          if (entry.location) {
+            const where = document.createElement('div');
+            where.className = 'where';
+            where.textContent = entry.location;
+            what.append(where);
+          }
+
+          row.append(when, what);
+          list.append(row);
+        }
+        el('status').hidden = true;
+        list.hidden = false;
+      }
+
+      async function load() {
+        const settings = await notchly.settings.all();
+        const url = (settings.url ?? '').trim();
+        if (!url) {
+          return say('Paste your calendar’s secret .ics address in Settings.');
+        }
+
+        const now = new Date();
+        const until = new Date(now.getTime() + (Number(settings.days) || 7) * 86400000);
+
+        try {
+          const response = await notchly.http.get(url);
+          if (response.status !== 200) {
+            return fail(`The calendar returned ${response.status}. Check the address in Settings.`);
+          }
+          if (!response.body.includes('BEGIN:VCALENDAR')) {
+            return fail('That address did not return a calendar. It should end in .ics');
+          }
+
+          const entries = readCalendar(response.body, now, until).slice(0, Number(settings.count) || 3);
+          if (!entries.length) {
+            return say(`Nothing in the next ${Number(settings.days) || 7} days.`);
+          }
+          render(entries, now);
+        } catch (error) {
+          fail(String(error.message || error));
+        }
+      }
+
+      load();
+      setInterval(load, 5 * 60 * 1000);
+    })();
+  </script>
+</body>
+</html>

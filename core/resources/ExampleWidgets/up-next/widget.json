@@ -1,0 +1,20 @@
+{
+  "id": "com.notchly.example.up-next",
+  "name": "Up Next",
+  "version": "1.0.0",
+  "author": "Notchly",
+  "description": "Your next calendar events, from any secret .ics URL. Shows how a widget parses a real feed.",
+  "entry": "index.html",
+  "icon": "calendar",
+  "height": 150,
+  "minHeight": 64,
+  "maxHeight": 300,
+  "refreshInterval": 900,
+  "permissions": ["network"],
+  "settings": [
+    { "key": "url", "type": "string", "label": "Calendar URL", "default": "",
+      "help": "The secret iCal address from Google Calendar, Outlook or Fastmail. Ends in .ics" },
+    { "key": "count", "type": "number", "label": "Events shown", "default": 3, "minimum": 1, "maximum": 6 },
+    { "key": "days", "type": "number", "label": "Days ahead", "default": 7, "minimum": 1, "maximum": 30 }
+  ]
+}
