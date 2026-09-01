@@ -22,7 +22,6 @@ function fallbackSettings() {
     closeDelay: 0.42,
     closeOnOutsideClick: true,
     hotkey: { accelerator: "", isEnabled: false },
-    material: "solid",
     opacity: 0.96,
     accentHex: "#6E9BFF",
     panelWidth: 372,
@@ -199,19 +198,10 @@ function appearancePane() {
 
   nodes.push(
     group("Surface", [
-      field(
-        "Material",
-        null,
-        segmented(
-          [["glass", "Glass"], ["tinted", "Tinted"], ["solid", "Solid"]],
-          settings.material,
-          (material) => commit((s) => (s.material = material)),
-        ),
-      ),
       field("Opacity", null, slider(settings.opacity * 100, 40, 100, 1, "%", (v) =>
         commit((s) => (s.opacity = v / 100)))),
       field("Accent", null, accentPicker()),
-    ], "A shaped window can't sit on a real blur without it showing as a rectangle behind the concave corners, so Glass is a translucent fill rather than vibrancy."),
+    ], "A shaped window can't sit on a real blur without it showing as a rectangle behind the concave corners, so the panel is a flat fill that Opacity thins rather than vibrancy."),
   );
 
   nodes.push(

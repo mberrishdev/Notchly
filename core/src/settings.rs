@@ -34,14 +34,6 @@ pub enum ActivationMode {
     HotkeyOnly,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum PanelMaterial {
-    Glass,
-    Tinted,
-    Solid,
-}
-
 /// One reading the handle shows while the panel is closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -148,9 +140,6 @@ defaulted!(d_corner_radius, f64, 26.0);
 defaulted!(d_activation, ActivationMode, ActivationMode::Hover);
 defaulted!(d_open_delay, f64, 0.14);
 defaulted!(d_close_delay, f64, 0.42);
-// Opaque by default: the notch this imitates is solid, and without a real backdrop
-// blur a translucent panel reads as a rendering fault.
-defaulted!(d_material, PanelMaterial, PanelMaterial::Solid);
 defaulted!(d_opacity, f64, 0.96);
 defaulted!(d_accent, String, "#6E9BFF".into());
 defaulted!(d_clipboard_limit, usize, 120);
@@ -202,7 +191,6 @@ pub struct Settings {
     pub close_delay: f64,
     pub close_on_outside_click: bool,
 
-    pub material: PanelMaterial,
     pub opacity: f64,
     pub accent_hex: String,
     pub shows_handle_when_idle: bool,
@@ -237,7 +225,6 @@ impl Default for Settings {
             open_delay: d_open_delay(),
             close_delay: d_close_delay(),
             close_on_outside_click: true,
-            material: d_material(),
             opacity: d_opacity(),
             accent_hex: d_accent(),
             shows_handle_when_idle: true,

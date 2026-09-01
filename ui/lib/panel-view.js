@@ -11,7 +11,6 @@ import { notchPath, growsHorizontally } from "./notch-shape.js";
 // A shaped window can't sit on a real blur (see docs/PORTING.md), so "glass" is a
 // translucent fill. Kept close to opaque: the notch this imitates is solid, and at
 // lower values it reads as a rendering fault rather than as depth.
-const MATERIAL_OPACITY = { glass: 0.92, tinted: 0.97, solid: 1 };
 // Long enough for the spring to settle: cutting it at 440ms leaves a 1.8pt snap on
 // the final frame, at 520ms it is 0.16pt.
 const OPEN_MS = 520;
@@ -77,8 +76,7 @@ function paint(metrics, settings, contentOpacity) {
     node.setAttribute("transform", transform);
   }
 
-  document.getElementById("shape").style.fillOpacity =
-    (MATERIAL_OPACITY[settings.material] ?? 0.96) * settings.opacity;
+  document.getElementById("shape").style.fillOpacity = settings.opacity;
 
   const content = document.getElementById("content");
   content.style.left = `${offsetX}px`;
