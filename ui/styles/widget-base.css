@@ -1,5 +1,13 @@
 /* Baseline so widgets sit on Notchly's card instead of a white page. Injected as the
    first stylesheet, so any rule a widget writes overrides it. */
+/* Notchly's panel is always dark — `theme_payload` reports appearance "dark" and never
+   anything else — so pin the scheme rather than leaving native controls inside a widget
+   to follow the OS. Without this a widget's <select> popup renders light on Windows
+   while its text stays near-white. */
+:root {
+  color-scheme: dark;
+}
+
 html,
 body {
   background: transparent !important;

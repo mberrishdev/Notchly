@@ -1,5 +1,8 @@
 :root {
-  color-scheme: dark light;
+  /* Not `dark light`: the native <select> popup on Windows is drawn by the platform,
+     and letting the OS pick gives a light popup under this window's near-white text —
+     invisible until the hover highlight repaints a row. The window is dark either way. */
+  color-scheme: dark;
   --accent: #6e9bff;
   --bg: #1e1e20;
   --sidebar: rgba(255, 255, 255, 0.03);
@@ -127,6 +130,12 @@ section.group {
   flex: 0 0 auto;
 }
 
+/* The popup is a platform surface, so it inherits the control's colour but none of its
+   box. Naming both ends here keeps it readable even if `color-scheme` is overridden. */
+select option {
+  background: var(--bg);
+  color: var(--text);
+}
 input[type="text"], select {
   appearance: none;
   background: rgba(255, 255, 255, 0.07);
