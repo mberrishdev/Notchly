@@ -376,7 +376,9 @@ pub fn run() {
 
             // Development harness: walk the panel through its states and save a PNG of
             // each one. The panel only ever appears at the edge of a live display, so
-            // this is the only practical way to review how it actually looks.
+            // this is the only practical way to review how it actually looks. Behind a
+            // feature so neither it nor the image codecs it needs ship in a release.
+            #[cfg(feature = "capture")]
             if let Ok(dir) = std::env::var("NOTCHLY_CAPTURE_DIR") {
                 let capture_handle = handle.clone();
                 std::thread::spawn(move || run_capture_pass(capture_handle, dir));
@@ -388,6 +390,7 @@ pub fn run() {
 }
 
 /// Steps the panel through idle and open, saving a capture of each.
+#[cfg(feature = "capture")]
 fn run_capture_pass(app: AppHandle, dir: String) {
     let _ = std::fs::create_dir_all(&dir);
 

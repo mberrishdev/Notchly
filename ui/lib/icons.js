@@ -51,7 +51,4 @@ export const icons = {
     <circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/>
     <path d="M8 4.8V8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`),
 
-  calendar: svg(`
-    <rect x="2.6" y="3.6" width="10.8" height="10" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/>
-    <path d="M2.6 6.8h10.8M5.6 2.2v2.6M10.4 2.2v2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>`),
 };

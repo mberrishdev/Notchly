@@ -231,7 +231,6 @@ button.action.danger { color: var(--danger); }
   background: rgba(255,255,255,0.08); color: var(--text-secondary);
 }
 .badge.accent { background: rgba(110,155,255,0.18); color: var(--accent); }
-.badge.warn { background: rgba(255,196,107,0.18); color: var(--caution); }
 
 .disclosure { padding: 10px 0 4px 30px; display: flex; flex-direction: column; gap: 10px; }
 .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10.5px; }

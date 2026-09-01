@@ -40,6 +40,7 @@ mod imp {
     /// Samples the window's own pixels. `(0.05, 0.5)` lands in the margin we leave for
     /// the shadow and must be fully transparent; `(0.9, 0.5)` lands inside the panel
     /// body and must be opaque.
+    #[cfg(feature = "capture")]
     pub fn sample_transparency(window: &WebviewWindow) -> serde_json::Value {
         use core_graphics::display::{
             kCGWindowImageBoundsIgnoreFraming, kCGWindowListOptionIncludingWindow,
@@ -112,6 +113,7 @@ mod imp {
     ///
     /// Capturing your own window needs no Screen Recording permission, which makes this
     /// the only way to actually look at a surface that lives at the edge of the display.
+    #[cfg(feature = "capture")]
     pub fn capture_png(window: &WebviewWindow, path: &str) -> serde_json::Value {
         use core_graphics::display::{
             kCGWindowImageBoundsIgnoreFraming, kCGWindowListOptionIncludingWindow, CGDisplay,
@@ -160,6 +162,7 @@ mod imp {
         }
     }
 
+    #[cfg(feature = "capture")]
     fn window_number(window: &WebviewWindow) -> Result<isize, ()> {
         let Some(handle) = ns_window(window) else { return Err(()) };
         unsafe { Ok(msg_send![handle, windowNumber]) }
@@ -167,6 +170,7 @@ mod imp {
 
     /// Reads the window back after configuration, so the spike reports what the system
     /// actually did rather than what we asked for.
+    #[cfg(feature = "capture")]
     pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
         let Some(handle) = ns_window(window) else {
             return serde_json::json!({ "error": "no ns_window" });
@@ -258,6 +262,7 @@ mod imp {
         }
     }
 
+    #[cfg(feature = "capture")]
     pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
         let Some(handle) = hwnd(window) else {
             return json!({ "error": "no hwnd" });
@@ -275,10 +280,12 @@ mod imp {
         })
     }
 
+    #[cfg(feature = "capture")]
     pub fn sample_transparency(_window: &WebviewWindow) -> serde_json::Value {
         json!({ "captured": false, "reason": "window capture is implemented for macOS only" })
     }
 
+    #[cfg(feature = "capture")]
     pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
         json!({ "error": "window capture is implemented for macOS only" })
     }
@@ -307,13 +314,16 @@ mod imp {
 
     pub fn configure_panel(_window: &WebviewWindow) {}
 
+    #[cfg(feature = "capture")]
     pub fn describe_window(_window: &WebviewWindow) -> serde_json::Value {
         serde_json::json!({ "platform": "other", "transparencyLooksCorrect": null })
     }
+    #[cfg(feature = "capture")]
     pub fn sample_transparency(_window: &WebviewWindow) -> serde_json::Value {
         serde_json::json!({ "captured": false })
     }
 
+    #[cfg(feature = "capture")]
     pub fn capture_png(_window: &WebviewWindow, _path: &str) -> serde_json::Value {
         serde_json::json!({ "error": "capture is macOS only" })
     }
@@ -323,6 +333,7 @@ mod imp {
 pub fn configure_panel(window: &WebviewWindow) {
     imp::configure_panel(window)
 }
+#[cfg(feature = "capture")]
 pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
     imp::describe_window(window)
 }
@@ -332,12 +343,14 @@ pub fn describe_window(window: &WebviewWindow) -> serde_json::Value {
 /// This is the only test that actually proves transparency: the window can report
 /// itself as non-opaque while the web view underneath still paints a solid
 /// background. Capturing our *own* window needs no Screen Recording permission.
+#[cfg(feature = "capture")]
 pub fn sample_transparency(window: &WebviewWindow) -> serde_json::Value {
     imp::sample_transparency(window)
 }
 
 /// Saves a PNG of the panel window. A development aid — the panel only ever appears at
 /// the edge of a live display, which makes it awkward to inspect any other way.
+#[cfg(feature = "capture")]
 pub fn capture_png(window: &WebviewWindow, path: &str) -> serde_json::Value {
     imp::capture_png(window, path)
 }

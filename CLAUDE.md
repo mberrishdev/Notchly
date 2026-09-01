@@ -84,10 +84,12 @@ Pure logic the UI depends on is pulled into a testable type rather than tested t
 a view — `Placement`, `HandleLayout` and `apps::rank` all exist in that shape.
 
 Setting `NOTCHLY_CAPTURE_DIR` makes the app walk itself through its states and save a
-PNG of each. It only works while the window server is compositing the panel: launched
-straight from the binary the app is never activated, WebKit reports the document
-hidden, and every capture comes back transparent even though the DOM is correct. **A
-blank capture means "not composited", not "not rendered."**
+PNG of each. It sits behind the `capture` Cargo feature — `cargo run --features
+capture` — so the harness never ships in a release build. It only works while the
+window server is compositing the panel: launched straight from the binary the app is
+never activated, WebKit reports the document hidden, and every capture comes back
+transparent even though the DOM is correct. **A blank capture means "not composited",
+not "not rendered."**
 
 ## Roadmap
 
@@ -96,6 +98,7 @@ blank capture means "not composited", not "not rendered."**
 3. ~~Custom widget host: `widget://` scheme, per-widget CSP, permissions, hot reload~~ done
 4. ~~Five built-in widgets~~ done
 5. ~~Settings window~~ done
-6. Windows: `WS_EX_NOACTIVATE`, and Now Playing via
-   `GlobalSystemMediaTransportControlsSessionManager` — not started
+6. ~~Windows: `WS_EX_NOACTIVATE`, and Now Playing via
+   `GlobalSystemMediaTransportControlsSessionManager`~~ written, unvalidated on
+   Windows hardware
 7. Launcher app icons; per-widget file isolation — not started

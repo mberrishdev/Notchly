@@ -209,7 +209,6 @@ pub struct Settings {
     pub reduce_motion: bool,
 
     pub launch_at_login: bool,
-    pub shows_menu_bar_icon: bool,
     pub hotkey: Hotkey,
     pub preferred_screen: Option<String>,
 
@@ -219,9 +218,6 @@ pub struct Settings {
     pub clipboard_approved_widgets: Vec<String>,
 
     pub clipboard_history_limit: usize,
-    pub clipboard_captures_images: bool,
-    pub has_completed_first_run: bool,
-    pub enable_web_inspector: bool,
 }
 
 impl Default for Settings {
@@ -247,7 +243,6 @@ impl Default for Settings {
             shows_handle_when_idle: true,
             reduce_motion: false,
             launch_at_login: false,
-            shows_menu_bar_icon: true,
             hotkey: d_hotkey(),
             preferred_screen: None,
             slots: d_slots(),
@@ -255,19 +250,16 @@ impl Default for Settings {
             network_approved_widgets: Vec::new(),
             clipboard_approved_widgets: Vec::new(),
             clipboard_history_limit: d_clipboard_limit(),
-            clipboard_captures_images: true,
-            has_completed_first_run: false,
-            enable_web_inspector: false,
         }
     }
 }
 
 /// Where settings, widgets and clipboard history live.
 ///
-/// Deliberately *not* the Swift build's `Notchly` directory while both exist in the
-/// tree: the two write incompatible slot records (`widgetID` versus `widgetId`), so
-/// sharing a settings file means each silently resets the other's widget list. Rename
-/// this to `Notchly` once the Swift app is retired.
+/// Deliberately *not* the Swift build's `Notchly` directory. The two write
+/// incompatible slot records (`widgetID` versus `widgetId`), so a shared settings file
+/// means each silently resets the other's widget list — and anyone upgrading from the
+/// Swift app still has one on disk. Renaming would strand every existing install.
 pub fn support_dir() -> PathBuf {
     let base = dirs_next_config().unwrap_or_else(std::env::temp_dir);
     let dir = base.join("Notchly (Tauri)");

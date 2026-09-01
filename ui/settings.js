@@ -138,8 +138,6 @@ function generalPane() {
     group("System", [
       field("Launch at login", null, toggle(settings.launchAtLogin, (v) =>
         commit((s) => (s.launchAtLogin = v)))),
-      field("Show menu bar icon", null, toggle(settings.showsMenuBarIcon, (v) =>
-        commit((s) => (s.showsMenuBarIcon = v)))),
       field(
         "Clipboard history",
         "Older unpinned entries are dropped once the limit is hit.",
