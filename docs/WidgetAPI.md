@@ -181,7 +181,7 @@ ring) is injected as the *first* stylesheet, so any rule you write wins.
 
 ## Bundled examples
 
-Four ship with the app and are copied into your widgets folder on first launch. They
+Five ship with the app and are copied into your widgets folder on first launch. They
 are meant to be read and pulled apart:
 
 - **pomodoro** — declared settings, persistent storage, notifications. Stores an end
@@ -189,6 +189,8 @@ are meant to be read and pulled apart:
 - **weather** — the network permission, using Open-Meteo with no API key.
 - **up-next** — parsing a real feed. Reads an iCalendar `.ics` URL and shows the next few
   events, including recurring ones.
+- **github-status** — authenticating. Sends a bearer token from a `secret` setting, and
+  translates the status codes GitHub answers with into something a user can act on.
 - **command-strip** — the shell permission, including how to handle being denied it.
 
 Settings ▸ Custom Widgets ▸ **Reinstall Examples** restores them if you edit them into a

@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { padding: 4px 2px; }
+    .repo {
+      display: grid; grid-template-columns: 9px 1fr auto; align-items: center;
+      gap: 9px; padding: 6px 0; border-top: 1px solid var(--notchly-hairline);
+      cursor: default;
+    }
+    .repo:first-child { border-top: 0; padding-top: 2px; }
+    .repo:hover .name { color: var(--notchly-accent); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--notchly-text-tertiary); }
+    .dot.pass { background: #7FD1AE; }
+    .dot.fail { background: #FF8A9B; }
+    .dot.running { background: #FFC46B; }
+    .name {
+      font-size: 11.5px; color: var(--notchly-text); min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .name .owner { color: var(--notchly-text-tertiary); }
+    .counts {
+      font-size: 10px; color: var(--notchly-text-secondary);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .inbox {
+      margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--notchly-hairline);
+      font-size: 10.5px; color: var(--notchly-text-secondary); cursor: default;
+    }
+    .inbox b { color: var(--notchly-text); font-weight: 600; }
+    .inbox:hover { color: var(--notchly-accent); }
+    .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
+    .status.error { color: #FF8A9B; text-align: left; }
+  </style>
+</head>
+<body>
+  <div id="status" class="status">Loading…</div>
+  <div id="content" hidden>
+    <div id="repos"></div>
+    <div id="inbox" class="inbox" hidden></div>
+  </div>
+
+  <script>
+    (async () => {
+      const el = (id) => document.getElementById(id);
+      const API = 'https://api.github.com';
+
+      // GitHub wants its own Accept and a pinned API version; without the version
+      // header a future default could change these shapes underneath the widget.
+      function headers(token) {
+        return {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        };
+      }
+
+      /**
+       * One authenticated GET. GitHub says a great deal through the status code, so
+       * translate the ones a user can actually act on rather than surfacing a number.
+       */
+      async function api(path, token) {
+        const response = await notchly.http.get(`${API}${path}`, headers(token));
+        if (response.status === 401) throw new Error('Token rejected. Check it in Settings.');
+        if (response.status === 403) throw new Error('Forbidden — the token may lack a scope, or you are rate limited.');
+        if (response.status === 404) throw new Error('Not found. Check the repository name, or the token’s access.');
+        if (response.status >= 400) throw new Error(`GitHub returned ${response.status}.`);
+        return JSON.parse(response.body);
+      }
+
+      /** The latest workflow run on the default branch, reduced to one word. */
+      async function ciState(repo, token) {
+        const data = await api(`/repos/${repo}/actions/runs?per_page=1`, token);
+        const run = data.workflow_runs && data.workflow_runs[0];
+        if (!run) return { label: 'no runs', dot: '' };
+        if (run.status !== 'completed') return { label: run.status.replace('_', ' '), dot: 'running' };
+        if (run.conclusion === 'success') return { label: 'passing', dot: 'pass' };
+        if (run.conclusion === 'skipped' || run.conclusion === 'cancelled') {
+          return { label: run.conclusion, dot: '' };
+        }
+        return { label: run.conclusion ?? 'failed', dot: 'fail' };
+      }
+
+      /**
+       * Open pull requests. Counted from the page rather than the Link header, which
+       * the bridge does not hand back — 100 is far past where a count stays useful.
+       */
+      async function openPulls(repo, token) {
+        const pulls = await api(`/repos/${repo}/pulls?state=open&per_page=100`, token);
+        return Array.isArray(pulls) ? pulls.length : 0;
+      }
+
+      function fail(message) {
+        el('status').textContent = message;
+        el('status').className = 'status error';
+        el('status').hidden = false;
+        el('content').hidden = true;
+      }
+
+      function say(message) {
+        el('status').textContent = message;
+        el('status').className = 'status';
+        el('status').hidden = false;
+        el('content').hidden = true;
+      }
+
+      function repoRow(repo, ci, pulls) {
+        const row = document.createElement('div');
+        row.className = 'repo';
+
+        const dot = document.createElement('span');
+        dot.className = `dot ${ci.dot}`;
+
+        const [owner, name] = repo.split('/');
+        const label = document.createElement('span');
+        label.className = 'name';
+        const ownerSpan = document.createElement('span');
+        ownerSpan.className = 'owner';
+        ownerSpan.textContent = `${owner}/`;
+        label.append(ownerSpan, document.createTextNode(name ?? ''));
+
+        const counts = document.createElement('span');
+        counts.className = 'counts';
+        counts.textContent = pulls > 0 ? `${ci.label} · ${pulls} PR${pulls === 1 ? '' : 's'}` : ci.label;
+
+        row.append(dot, label, counts);
+        row.addEventListener('click', () => notchly.open(`https://github.com/${repo}`));
+        return row;
+      }
+
+      async function load() {
+        const settings = await notchly.settings.all();
+        const token = (settings.token ?? '').trim();
+        const repos = (settings.repos ?? '')
+          .split(',')
+          .map((one) => one.trim())
+          .filter(Boolean)
+          .slice(0, 3);
+
+        if (!token) return say('Add a GitHub token in Settings.');
+        if (!repos.length) return say('Add a repository — owner/name — in Settings.');
+
+        try {
+          const rows = [];
+          for (const repo of repos) {
+            // Sequential on purpose: three repos is six calls, and hammering the API
+            // in parallel is how a widget earns a secondary rate limit.
+            const [ci, pulls] = [await ciState(repo, token), await openPulls(repo, token)];
+            rows.push(repoRow(repo, ci, pulls));
+          }
+          el('repos').replaceChildren(...rows);
+
+          const inbox = el('inbox');
+          if (settings.notifications === false) {
+            inbox.hidden = true;
+          } else {
+            const unread = await api('/notifications?all=false', token);
+            const count = Array.isArray(unread) ? unread.length : 0;
+            inbox.replaceChildren();
+            const strong = document.createElement('b');
+            strong.textContent = String(count);
+            inbox.append(strong, document.createTextNode(` unread notification${count === 1 ? '' : 's'}`));
+            inbox.onclick = () => notchly.open('https://github.com/notifications');
+            inbox.hidden = false;
+          }
+
+          el('status').hidden = true;
+          el('content').hidden = false;
+        } catch (error) {
+          fail(String(error.message || error));
+        }
+      }
+
+      load();
+      // Two minutes. Authenticated GitHub allows 5000 requests an hour and this spends
+      // at most seven a cycle, so the ceiling is nowhere near — but the panel is not a
+      // dashboard, and a token is a shared budget with whatever else is using it.
+      setInterval(load, 2 * 60 * 1000);
+    })();
+  </script>
+</body>
+</html>
