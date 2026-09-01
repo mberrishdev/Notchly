@@ -145,6 +145,71 @@ pub fn theme_payload(settings: &Settings) -> Value {
     })
 }
 
+/// Header names a widget may not set. These describe the connection rather than the
+/// request, so letting a widget forge them would misdescribe a hop it does not own.
+/// Everything else — `Authorization` above all — is the widget's to send.
+const REFUSED_HEADERS: [&str; 6] = [
+    "connection",
+    "host",
+    "proxy-authorization",
+    "proxy-connection",
+    "transfer-encoding",
+    "upgrade",
+];
+
+/// Methods a widget may use. `CONNECT` and `TRACE` are refused: neither has a meaning
+/// worth handing to a widget, and both are the usual ingredients of a proxy trick.
+fn http_method(name: Option<&str>) -> Result<reqwest::Method, String> {
+    let Some(name) = name else {
+        return Ok(reqwest::Method::GET);
+    };
+    match name.to_ascii_uppercase().as_str() {
+        "GET" => Ok(reqwest::Method::GET),
+        "HEAD" => Ok(reqwest::Method::HEAD),
+        "POST" => Ok(reqwest::Method::POST),
+        "PUT" => Ok(reqwest::Method::PUT),
+        "PATCH" => Ok(reqwest::Method::PATCH),
+        "DELETE" => Ok(reqwest::Method::DELETE),
+        other => Err(format!("http does not allow the {other} method.")),
+    }
+}
+
+/// Flattens the `headers` object into pairs, refusing the ones above.
+///
+/// A missing or null value is not an error — `http.get(url)` with no headers is the
+/// common case. A non-string value is, because silently stringifying `{ Accept: 1 }`
+/// would send something the widget never wrote.
+fn header_pairs(value: &Value) -> Result<Vec<(String, String)>, String> {
+    let Some(map) = value.as_object() else {
+        return match value {
+            Value::Null => Ok(Vec::new()),
+            _ => Err("http headers must be an object.".into()),
+        };
+    };
+    let mut pairs = Vec::with_capacity(map.len());
+    for (name, entry) in map {
+        let Some(text) = entry.as_str() else {
+            return Err(format!("The {name} header must be a string."));
+        };
+        if REFUSED_HEADERS.contains(&name.to_ascii_lowercase().as_str()) {
+            return Err(format!("Widgets cannot set the {name} header."));
+        }
+        pairs.push((name.clone(), text.to_string()));
+    }
+    Ok(pairs)
+}
+
+/// The request body, and the content type it implies when the widget named none.
+/// A string is sent as written; anything else is JSON, which is what a widget passing
+/// an object plainly meant.
+fn http_body(value: &Value) -> Option<(String, &'static str)> {
+    match value {
+        Value::Null => None,
+        Value::String(text) => Some((text.clone(), "text/plain; charset=utf-8")),
+        other => Some((other.to_string(), "application/json")),
+    }
+}
+
 /// Dispatches one `window.notchly` call.
 pub async fn dispatch(
     app: AppHandle,
@@ -252,13 +317,40 @@ pub async fn dispatch(
                 .map_err(|error| error.to_string())
         }
 
-        "http.get" => {
+        // `http.get` is `http.request` with the method fixed, so the two cannot drift.
+        "http.get" | "http.request" => {
             require(&app, &widget_id, Permission::Network)?;
-            let url = string("url").ok_or_else(|| "http.get needs a url.".to_string())?;
+            let url = string("url").ok_or_else(|| "http needs a url.".to_string())?;
             if !(url.starts_with("https://") || url.starts_with("http://")) {
-                return Err("http.get needs an http(s) url.".into());
+                return Err("http needs an http(s) url.".into());
             }
-            let response = reqwest::get(&url).await.map_err(|error| error.to_string())?;
+            let verb = match method.as_str() {
+                "http.get" => reqwest::Method::GET,
+                _ => http_method(string("method").as_deref())?,
+            };
+            let headers = header_pairs(&param("headers"))?;
+
+            let client = reqwest::Client::builder()
+                // A widget cannot cancel its own request, so an unresponsive host would
+                // otherwise hold the promise open for the life of the app.
+                .timeout(std::time::Duration::from_secs(20))
+                .build()
+                .map_err(|error| error.to_string())?;
+            let mut request = client.request(verb, &url);
+            let named_content_type = headers
+                .iter()
+                .any(|(name, _)| name.eq_ignore_ascii_case("content-type"));
+            for (name, value) in headers {
+                request = request.header(name, value);
+            }
+            if let Some((body, content_type)) = http_body(&param("body")) {
+                if !named_content_type {
+                    request = request.header("content-type", content_type);
+                }
+                request = request.body(body);
+            }
+
+            let response = request.send().await.map_err(|error| error.to_string())?;
             let status = response.status().as_u16();
             let body = response.text().await.map_err(|error| error.to_string())?;
             Ok(json!({ "status": status, "body": body }))
@@ -355,5 +447,79 @@ fn run_shell(command: &str, timeout: f64) -> Value {
             "stderr": String::from_utf8_lossy(&output.stderr),
         }),
         Err(error) => json!({ "code": -1, "stdout": "", "stderr": error.to_string() }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{header_pairs, http_body, http_method};
+    use serde_json::json;
+
+    #[test]
+    fn a_missing_method_is_a_get() {
+        assert_eq!(http_method(None).unwrap(), reqwest::Method::GET);
+    }
+
+    #[test]
+    fn methods_are_matched_regardless_of_case() {
+        assert_eq!(http_method(Some("post")).unwrap(), reqwest::Method::POST);
+        assert_eq!(http_method(Some("PaTcH")).unwrap(), reqwest::Method::PATCH);
+    }
+
+    #[test]
+    fn connect_and_trace_are_refused_by_name() {
+        for method in ["CONNECT", "TRACE"] {
+            let error = http_method(Some(method)).unwrap_err();
+            assert!(error.contains(method), "{error}");
+        }
+    }
+
+    #[test]
+    fn absent_headers_are_not_an_error() {
+        assert!(header_pairs(&json!(null)).unwrap().is_empty());
+    }
+
+    #[test]
+    fn authorization_is_passed_through() {
+        let pairs = header_pairs(&json!({ "Authorization": "Bearer t" })).unwrap();
+        assert_eq!(pairs, vec![("Authorization".into(), "Bearer t".into())]);
+    }
+
+    #[test]
+    fn connection_headers_are_refused() {
+        // Case-insensitively: the refusal must not be dodged by spelling it Host.
+        for name in ["connection", "Host", "Transfer-Encoding"] {
+            assert!(header_pairs(&json!({ name: "x" })).is_err(), "{name} was allowed");
+        }
+    }
+
+    #[test]
+    fn a_non_string_header_is_rejected_rather_than_stringified() {
+        let error = header_pairs(&json!({ "Accept": 1 })).unwrap_err();
+        assert!(error.contains("Accept"), "{error}");
+    }
+
+    #[test]
+    fn headers_must_be_an_object() {
+        assert!(header_pairs(&json!("Authorization: Bearer t")).is_err());
+    }
+
+    #[test]
+    fn a_string_body_is_sent_as_written() {
+        let (body, kind) = http_body(&json!("a=1")).unwrap();
+        assert_eq!(body, "a=1");
+        assert!(kind.starts_with("text/plain"));
+    }
+
+    #[test]
+    fn an_object_body_becomes_json() {
+        let (body, kind) = http_body(&json!({ "a": 1 })).unwrap();
+        assert_eq!(body, r#"{"a":1}"#);
+        assert_eq!(kind, "application/json");
+    }
+
+    #[test]
+    fn no_body_means_no_body() {
+        assert!(http_body(&json!(null)).is_none());
     }
 }
