@@ -45,8 +45,11 @@ jobs:
         with:
           workspaces: core
       - run: npm ci
+      # No signing key here, and updater artifacts refuse to build without one — CI
+      # bundles are throwaway builds to download, never something the updater serves.
       - name: Build bundle
-        run: npx tauri build --bundles ${{ runner.os == 'Windows' && 'nsis' || 'app' }}
+        shell: bash
+        run: npx tauri build --bundles ${{ runner.os == 'Windows' && 'nsis' || 'app' }} --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       # Unsigned, so both platforms will warn on launch — but it means a Windows
       # installer is downloadable from any commit, which is the only way to try the

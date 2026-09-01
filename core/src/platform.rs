@@ -211,6 +211,7 @@ mod imp {
 
 #[cfg(target_os = "windows")]
 mod imp {
+    #[cfg(feature = "capture")]
     use serde_json::json;
     use tauri::WebviewWindow;
     use windows::Win32::Foundation::HWND;
