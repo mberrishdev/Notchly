@@ -68,16 +68,25 @@
       async function api(path, token, subject) {
         const response = await notchly.http.get(`${API}${path}`, headers(token));
         if (response.status >= 400) {
-          const error = new Error(explain(response.status, subject));
+          const error = new Error(explain(response.status, subject, response.body));
           error.status = response.status;
           throw error;
         }
         return JSON.parse(response.body);
       }
 
-      function explain(status, subject) {
+      function explain(status, subject, body) {
         if (status === 401) return 'Token rejected. Check it in Settings.';
-        if (status === 403) return `${subject}: forbidden. The token may lack access, or you are rate limited.`;
+        if (status === 403 || status === 429) {
+          // GitHub uses 403 for both "your token may not" and "you have asked too
+          // often", and only the body tells them apart — so read it rather than
+          // offering the user both and letting them guess.
+          if (/rate limit/i.test(body || '')) {
+            return `${subject}: rate limited. It will work again shortly.`;
+          }
+          return `${subject}: the token cannot read this. A fine-grained token needs ` +
+            `Actions and Pull requests set to Read on the repository.`;
+        }
         if (status === 404) return `${subject}: not found. Check the name, or the token’s access.`;
         return `${subject}: GitHub returned ${status}.`;
       }
