@@ -21,6 +21,17 @@ The Panel can dock to the top, bottom, left, or right edge. You can move it, res
 choose what the closed Handle shows, and add your own widgets as plain HTML/CSS/JS
 folders.
 
+<table align="center">
+  <tr>
+    <td align="center" width="50%"><img src="docs/assets/handle-closed.png" alt="The closed Handle showing Idle Chips" /></td>
+    <td align="center" width="50%"><img src="docs/assets/panel-open.png" alt="The open Panel with the System, Quick Launcher, and Clipboard widgets" /></td>
+  </tr>
+  <tr>
+    <td align="center">The closed Handle, showing Idle Chips.</td>
+    <td align="center">The open Panel, hosting widgets.</td>
+  </tr>
+</table>
+
 ## Download
 
 Download the latest draft or published release from
