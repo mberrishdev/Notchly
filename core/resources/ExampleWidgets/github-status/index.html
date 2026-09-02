@@ -5,13 +5,16 @@
   <style>
     body { padding: 4px 2px; }
     .repo {
-      display: grid; grid-template-columns: 9px 1fr auto; align-items: center;
-      gap: 9px; padding: 6px 0; border-top: 1px solid var(--notchly-hairline);
+      display: grid; grid-template-columns: 7px 1fr auto; align-items: baseline;
+      gap: 10px; padding: 7px 0; border-top: 1px solid var(--notchly-hairline);
       cursor: default;
     }
-    .repo:first-child { border-top: 0; padding-top: 2px; }
+    .repo:first-child { border-top: 0; padding-top: 0; }
     .repo:hover .name { color: var(--notchly-accent); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--notchly-text-tertiary); }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%; align-self: center;
+      background: var(--notchly-text-tertiary);
+    }
     .dot.pass { background: #7FD1AE; }
     .dot.fail { background: #FF8A9B; }
     .dot.running { background: #FFC46B; }
@@ -21,17 +24,22 @@
     }
     .name .owner { color: var(--notchly-text-tertiary); }
     .counts {
-      font-size: 10px; color: var(--notchly-text-secondary);
+      font-size: 10px; color: var(--notchly-text-tertiary);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     .inbox {
-      margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--notchly-hairline);
-      font-size: 10.5px; color: var(--notchly-text-secondary); cursor: default;
+      margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--notchly-hairline);
+      font-size: 10.5px; line-height: 1.5; color: var(--notchly-text-secondary);
+      cursor: default;
     }
     .inbox b { color: var(--notchly-text); font-weight: 600; }
     .inbox:hover { color: var(--notchly-accent); }
-    /* A line explaining why the inbox is missing is not something to click. */
-    .inbox.muted { color: var(--notchly-text-tertiary); cursor: default; }
+    /* Not a count but an explanation of why there isn't one — so it reads as an aside,
+       is not offered as something to click, and has room to wrap onto a second line. */
+    .inbox.muted {
+      font-size: 10px; line-height: 1.55; color: var(--notchly-text-tertiary);
+      text-wrap: pretty;
+    }
     .inbox.muted:hover { color: var(--notchly-text-tertiary); }
     .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
     .status.error { color: #FF8A9B; text-align: left; }
