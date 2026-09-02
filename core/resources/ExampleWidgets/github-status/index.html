@@ -75,14 +75,20 @@
         return JSON.parse(response.body);
       }
 
-      /** GitHub explains itself in the body. Quote it rather than paraphrasing. */
+      /**
+       * GitHub explains itself in the body. Quote it rather than paraphrasing — and
+       * when it says something unparseable, show that too rather than inventing a
+       * likely cause, which is how a 403 got blamed on four different things.
+       */
       function githubSays(body) {
         try {
           const message = JSON.parse(body).message;
-          return typeof message === 'string' && message ? message : null;
+          if (typeof message === 'string' && message) return message;
         } catch {
-          return null;
+          /* not JSON — fall through and quote it raw */
         }
+        const raw = String(body ?? '').trim().replace(/\s+/g, ' ').slice(0, 140);
+        return raw ? `GitHub said: ${raw}` : null;
       }
 
       function explain(status, subject, body) {
@@ -93,11 +99,14 @@
           if (/rate limit/i.test(body || '')) {
             return `${subject}: rate limited. It will work again shortly.`;
           }
-          // "Resource not accessible by personal access token" is GitHub's way of
-          // saying the token type or its permissions do not allow this call, and it
-          // is more precise than anything paraphrased.
-          return `${subject}: ${said ?? 'forbidden'}. A fine-grained token needs ` +
-            `Actions and Pull requests set to Read.`;
+          // Only add advice when GitHub's own words call for it. "Resource not
+          // accessible by personal access token" is a permissions problem; the rest
+          // of the 403s are not, and telling someone to change permissions that were
+          // already correct sends them the wrong way.
+          const permissions = /not accessible by/i.test(said ?? '')
+            ? ' A fine-grained token needs Actions and Pull requests set to Read.'
+            : '';
+          return `${subject}: ${said ?? 'forbidden'}.${permissions}`;
         }
         return `${subject}: ${said ?? `GitHub returned ${status}`}.`;
       }

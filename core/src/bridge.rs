@@ -164,6 +164,14 @@ pub fn theme_payload(settings: &Settings) -> Value {
     })
 }
 
+/// What Notchly calls itself when a widget makes a request.
+///
+/// Identifying the app rather than the widget is deliberate: the host is what a server
+/// would rate limit or block, and a widget cannot be trusted to name itself honestly.
+fn user_agent(version: &str) -> String {
+    format!("Notchly/{version}")
+}
+
 /// Header names a widget may not set. These describe the connection rather than the
 /// request, so letting a widget forge them would misdescribe a hop it does not own.
 /// Everything else — `Authorization` above all — is the widget's to send.
@@ -350,6 +358,12 @@ pub async fn dispatch(
             let headers = header_pairs(&param("headers"))?;
 
             let client = reqwest::Client::builder()
+                // reqwest sends no User-Agent unless told to, and some hosts refuse a
+                // request without one outright — GitHub answers 403 "Request forbidden
+                // by administrative rules", which reads like a credentials problem and
+                // is not one. A widget that sets its own still wins: an explicit header
+                // overrides the default.
+                .user_agent(user_agent(&app.package_info().version.to_string()))
                 // A widget cannot cancel its own request, so an unresponsive host would
                 // otherwise hold the promise open for the life of the app.
                 .timeout(std::time::Duration::from_secs(20))
@@ -471,8 +485,13 @@ fn run_shell(command: &str, timeout: f64) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::{header_pairs, http_body, http_method};
+    use super::{header_pairs, http_body, http_method, user_agent};
     use serde_json::json;
+
+    #[test]
+    fn the_user_agent_names_the_app_and_its_version() {
+        assert_eq!(user_agent("0.7.0"), "Notchly/0.7.0");
+    }
 
     #[test]
     fn a_missing_method_is_a_get() {
