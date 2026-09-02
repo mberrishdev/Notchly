@@ -3,15 +3,26 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { padding: 4px 2px; }
+    /* No height is declared in the manifest, so the runtime measures this body and the
+       card is only as tall as its rows. Centred for the case where the panel hands it
+       more room than it asked for — the minimum height, or a single short row. */
+    body {
+      padding: 2px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
     .repo {
-      display: grid; grid-template-columns: 9px 1fr auto; align-items: center;
-      gap: 9px; padding: 6px 0; border-top: 1px solid var(--notchly-hairline);
+      display: grid; grid-template-columns: 7px 1fr auto; align-items: baseline;
+      gap: 10px; padding: 7px 0; border-top: 1px solid var(--notchly-hairline);
       cursor: default;
     }
-    .repo:first-child { border-top: 0; padding-top: 2px; }
+    .repo:first-child { border-top: 0; padding-top: 0; }
     .repo:hover .name { color: var(--notchly-accent); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--notchly-text-tertiary); }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%; align-self: center;
+      background: var(--notchly-text-tertiary);
+    }
     .dot.pass { background: #7FD1AE; }
     .dot.fail { background: #FF8A9B; }
     .dot.running { background: #FFC46B; }
@@ -21,15 +32,9 @@
     }
     .name .owner { color: var(--notchly-text-tertiary); }
     .counts {
-      font-size: 10px; color: var(--notchly-text-secondary);
+      font-size: 10px; color: var(--notchly-text-tertiary);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
-    .inbox {
-      margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--notchly-hairline);
-      font-size: 10.5px; color: var(--notchly-text-secondary); cursor: default;
-    }
-    .inbox b { color: var(--notchly-text); font-weight: 600; }
-    .inbox:hover { color: var(--notchly-accent); }
     .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
     .status.error { color: #FF8A9B; text-align: left; }
   </style>
@@ -38,7 +43,6 @@
   <div id="status" class="status">Loading…</div>
   <div id="content" hidden>
     <div id="repos"></div>
-    <div id="inbox" class="inbox" hidden></div>
   </div>
 
   <script>
@@ -58,20 +62,59 @@
 
       /**
        * One authenticated GET. GitHub says a great deal through the status code, so
-       * translate the ones a user can actually act on rather than surfacing a number.
+       * translate the ones a user can act on rather than surfacing a number — and name
+       * the thing that failed, since a cycle makes seven calls and "Forbidden" alone
+       * gives you no way to tell which one.
        */
-      async function api(path, token) {
+      async function api(path, token, subject) {
         const response = await notchly.http.get(`${API}${path}`, headers(token));
-        if (response.status === 401) throw new Error('Token rejected. Check it in Settings.');
-        if (response.status === 403) throw new Error('Forbidden — the token may lack a scope, or you are rate limited.');
-        if (response.status === 404) throw new Error('Not found. Check the repository name, or the token’s access.');
-        if (response.status >= 400) throw new Error(`GitHub returned ${response.status}.`);
+        if (response.status >= 400) {
+          const error = new Error(explain(response.status, subject, response.body));
+          error.status = response.status;
+          throw error;
+        }
         return JSON.parse(response.body);
+      }
+
+      /**
+       * GitHub explains itself in the body. Quote it rather than paraphrasing — and
+       * when it says something unparseable, show that too rather than inventing a
+       * likely cause, which is how a 403 got blamed on four different things.
+       */
+      function githubSays(body) {
+        try {
+          const message = JSON.parse(body).message;
+          if (typeof message === 'string' && message) return message;
+        } catch {
+          /* not JSON — fall through and quote it raw */
+        }
+        const raw = String(body ?? '').trim().replace(/\s+/g, ' ').slice(0, 140);
+        return raw ? `GitHub said: ${raw}` : null;
+      }
+
+      function explain(status, subject, body) {
+        const said = githubSays(body);
+        if (status === 401) return `${subject}: ${said ?? 'token rejected'}. Check it in Settings.`;
+        if (status === 404) return `${subject}: ${said ?? 'not found'}. Check the name and the token’s access.`;
+        if (status === 403 || status === 429) {
+          if (/rate limit/i.test(body || '')) {
+            return `${subject}: rate limited. It will work again shortly.`;
+          }
+          // Only add advice when GitHub's own words call for it. "Resource not
+          // accessible by personal access token" is a permissions problem; the rest
+          // of the 403s are not, and telling someone to change permissions that were
+          // already correct sends them the wrong way.
+          const permissions = /not accessible by/i.test(said ?? '')
+            ? ' A fine-grained token needs Actions and Pull requests set to Read.'
+            : '';
+          return `${subject}: ${said ?? 'forbidden'}.${permissions}`;
+        }
+        return `${subject}: ${said ?? `GitHub returned ${status}`}.`;
       }
 
       /** The latest workflow run on the default branch, reduced to one word. */
       async function ciState(repo, token) {
-        const data = await api(`/repos/${repo}/actions/runs?per_page=1`, token);
+        const data = await api(`/repos/${repo}/actions/runs?per_page=1`, token, repo);
         const run = data.workflow_runs && data.workflow_runs[0];
         if (!run) return { label: 'no runs', dot: '' };
         if (run.status !== 'completed') return { label: run.status.replace('_', ' '), dot: 'running' };
@@ -87,8 +130,56 @@
        * the bridge does not hand back — 100 is far past where a count stays useful.
        */
       async function openPulls(repo, token) {
-        const pulls = await api(`/repos/${repo}/pulls?state=open&per_page=100`, token);
+        const pulls = await api(`/repos/${repo}/pulls?state=open&per_page=100`, token, repo);
         return Array.isArray(pulls) ? pulls.length : 0;
+      }
+
+      /**
+       * Accepts "owner/name", or a github.com URL pasted from the address bar, and
+       * rejects anything else. A bare "Notchly" would otherwise be sent as a URL path
+       * and come back as a 403 about token access, which is true of the request and
+       * useless to the person who typed it.
+       */
+      function repoPath(text) {
+        const cleaned = text
+          .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+          .replace(/\.git$/i, '')
+          .replace(/\/+$/, '');
+        return /^[\w.-]+\/[\w.-]+$/.test(cleaned) ? cleaned : null;
+      }
+
+      /**
+       * A 403 on a repository has two causes with different fixes: the token may not
+       * cover the repository at all, or it may cover it without the permissions these
+       * calls need. Metadata is mandatory on every fine-grained token, so a plain
+       * repository lookup separates them — and only runs when something already failed.
+       */
+      async function forbiddenReason(repo, token) {
+        // Is the token reaching GitHub at all? /rate_limit answers for every kind of
+        // token, costs no quota, and says so plainly: an authenticated caller gets
+        // 5000 an hour, an anonymous one gets 60. /user is not a safe probe here —
+        // fine-grained tokens can be refused it outright.
+        try {
+          const limits = await api('/rate_limit', token, 'Token');
+          if ((limits?.resources?.core?.limit ?? 0) <= 60) {
+            return 'The token is not reaching GitHub — requests are going out ' +
+              'unauthenticated. Re-enter it in Settings and press Save.';
+          }
+        } catch (error) {
+          return `The token was refused: ${error.message}`;
+        }
+
+        // The token works. Metadata is mandatory on every fine-grained token, so a
+        // plain lookup says whether this repository is one the token covers.
+        try {
+          await api(`/repos/${repo}`, token, repo);
+          return `${repo}: the token reaches this repository but cannot read it. ` +
+            `Set Actions and Pull requests to Read, then press Update.`;
+        } catch (error) {
+          return `${repo}: the token is valid but cannot see this repository ` +
+            `(${error.status}). Check Repository access on the token, and that the ` +
+            `owner is spelled exactly as GitHub has it.`;
+        }
       }
 
       function fail(message) {
@@ -132,44 +223,42 @@
       async function load() {
         const settings = await notchly.settings.all();
         const token = (settings.token ?? '').trim();
-        const repos = (settings.repos ?? '')
+        const entries = (settings.repos ?? '')
           .split(',')
           .map((one) => one.trim())
           .filter(Boolean)
           .slice(0, 3);
 
+        const repos = [];
+        const unusable = [];
+        for (const entry of entries) {
+          const path = repoPath(entry);
+          if (path) repos.push(path);
+          else unusable.push(entry);
+        }
+
         if (!token) return say('Add a GitHub token in Settings.');
+        if (unusable.length) {
+          return say(`Repositories look like owner/name. Check “${unusable[0]}” in Settings.`);
+        }
         if (!repos.length) return say('Add a repository — owner/name — in Settings.');
 
-        try {
-          const rows = [];
-          for (const repo of repos) {
+        const rows = [];
+        for (const repo of repos) {
+          try {
             // Sequential on purpose: three repos is six calls, and hammering the API
             // in parallel is how a widget earns a secondary rate limit.
             const [ci, pulls] = [await ciState(repo, token), await openPulls(repo, token)];
             rows.push(repoRow(repo, ci, pulls));
+          } catch (error) {
+            if (error.status === 403) return fail(await forbiddenReason(repo, token));
+            return fail(String(error.message || error));
           }
-          el('repos').replaceChildren(...rows);
-
-          const inbox = el('inbox');
-          if (settings.notifications === false) {
-            inbox.hidden = true;
-          } else {
-            const unread = await api('/notifications?all=false', token);
-            const count = Array.isArray(unread) ? unread.length : 0;
-            inbox.replaceChildren();
-            const strong = document.createElement('b');
-            strong.textContent = String(count);
-            inbox.append(strong, document.createTextNode(` unread notification${count === 1 ? '' : 's'}`));
-            inbox.onclick = () => notchly.open('https://github.com/notifications');
-            inbox.hidden = false;
-          }
-
-          el('status').hidden = true;
-          el('content').hidden = false;
-        } catch (error) {
-          fail(String(error.message || error));
         }
+        el('repos').replaceChildren(...rows);
+        el('status').hidden = true;
+        el('content').hidden = false;
+
       }
 
       load();

@@ -27,10 +27,34 @@ fn entry(widget_id: &str, key: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(SERVICE, &account(widget_id, key)).map_err(|error| error.to_string())
 }
 
+/// Secrets already read this run.
+///
+/// The credential store is not free to ask: macOS ties permission to the binary's
+/// signature and prompts when it does not match, and a widget polling its settings
+/// every couple of minutes would ask again every time. One read per secret per launch
+/// is enough — nothing else on the machine can change the value while we hold it,
+/// because `set` is the only writer and it updates this too.
+static CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, String>>> =
+    std::sync::OnceLock::new();
+
+fn cache() -> &'static std::sync::Mutex<std::collections::HashMap<String, String>> {
+    CACHE.get_or_init(Default::default)
+}
+
 /// The stored secret, or `None` when nothing is filed — which is not an error: a widget
 /// asking before the user has pasted anything is the ordinary first run.
 pub fn get(widget_id: &str, key: &str) -> Option<String> {
-    entry(widget_id, key).ok()?.get_password().ok()
+    let account = account(widget_id, key);
+    if let Ok(seen) = cache().lock() {
+        if let Some(secret) = seen.get(&account) {
+            return Some(secret.clone());
+        }
+    }
+    let secret = entry(widget_id, key).ok()?.get_password().ok()?;
+    if let Ok(mut seen) = cache().lock() {
+        seen.insert(account, secret.clone());
+    }
+    Some(secret)
 }
 
 /// Whether a secret is filed, without reading it back.
@@ -41,6 +65,13 @@ pub fn is_set(widget_id: &str, key: &str) -> bool {
 /// Stores a secret. An empty value clears it, so the settings window needs no separate
 /// delete path — emptying the field is the delete.
 pub fn set(widget_id: &str, key: &str, value: &str) -> Result<(), String> {
+    if let Ok(mut seen) = cache().lock() {
+        // Written before the store call so a failure cannot leave a stale value behind.
+        seen.remove(&account(widget_id, key));
+        if !value.is_empty() {
+            seen.insert(account(widget_id, key), value.to_string());
+        }
+    }
     let entry = entry(widget_id, key)?;
     if value.is_empty() {
         return match entry.delete_credential() {

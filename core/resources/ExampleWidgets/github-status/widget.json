@@ -3,19 +3,17 @@
   "name": "GitHub",
   "version": "1.0.0",
   "author": "Notchly",
-  "description": "CI, open pull requests and unread notifications. Shows how a widget authenticates.",
+  "description": "CI and open pull requests for the repositories you watch. Shows how a widget authenticates.",
   "entry": "index.html",
   "icon": "checkmark.seal",
-  "height": 132,
-  "minHeight": 60,
+  "minHeight": 44,
   "maxHeight": 320,
   "refreshInterval": 0,
   "permissions": ["network"],
   "settings": [
     { "key": "token", "type": "secret", "label": "GitHub token",
-      "help": "A fine-grained token with read access to the repos below. Never leaves the OS credential store." },
+      "help": "A fine-grained token with Actions and Pull requests set to Read on each repository below. Never leaves the OS credential store." },
     { "key": "repos", "type": "string", "label": "Repositories", "default": "",
-      "help": "owner/name, comma separated. The first three are shown." },
-    { "key": "notifications", "type": "boolean", "label": "Unread notifications", "default": true }
+      "help": "owner/name, comma separated. The first three are shown." }
   ]
 }
