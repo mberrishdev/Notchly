@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notchly — a panel for the edge of your screen</title>
+<meta name="description" content="Notchly docks a widget panel to any edge of your display. Five widgets built in, and your own are a folder with an index.html. macOS and Windows, MIT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <span class="wordmark">Notchly</span>
+  <nav>
+    <a href="#widgets">Widgets</a>
+    <a href="#build">Build one</a>
+    <!-- The count is filled in from GitHub if it answers, and simply omitted if it
+         doesn't. A star button that reads "Star ·" is worse than one that reads "Star". -->
+    <a class="star" href="https://github.com/mberrishdev/Notchly">
+      <svg class="mark" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>Star</span><span id="stars" class="count" hidden></span>
+    </a>
+  </nav>
+</header>
+
+<!-- The hero is the product, drawn with the same path maths the app uses. -->
+<section class="hero">
+  <div class="hero-copy">
+    <h1>A panel for the edge of your screen.</h1>
+    <p class="lede">
+      Notchly sits against the bezel. Closed, it shows what you want to keep an eye on.
+      Reach for it and it opens into your widgets — the five it ships with, or the ones
+      you write yourself.
+    </p>
+    <div class="actions">
+      <a class="get" href="https://github.com/mberrishdev/Notchly/releases/latest">Download</a>
+      <span class="get-note">macOS and Windows · free · MIT</span>
+    </div>
+  </div>
+
+  <figure class="display" aria-label="Notchly docked to the edge of a display">
+    <div class="screen">
+      <div class="wall"></div>
+      <div id="stage" class="stage"></div>
+    </div>
+    <figcaption class="edges">
+      <span class="edges-label">Dock it</span>
+      <button data-edge="top">Top</button>
+      <button data-edge="trailing">Right</button>
+      <button data-edge="bottom">Bottom</button>
+      <button data-edge="leading" aria-pressed="true">Left</button>
+      <button id="toggle" class="toggle">Open it</button>
+    </figcaption>
+  </figure>
+</section>
+
+<section class="band" id="widgets">
+  <div class="col">
+    <h2>Closed, it still answers things.</h2>
+    <p>
+      The handle holds readings you pick — the time, load, memory, battery, what's playing.
+      Anything that's a fraction of something draws an arc, so you can read it without
+      stopping to read it. Rest on one and its detail appears without opening the panel.
+    </p>
+  </div>
+  <div class="col">
+    <h2>Open, it's whatever you put in it.</h2>
+    <ul class="built-in">
+      <li><b>Clock</b> time, date, week number</li>
+      <li><b>Now Playing</b> controls for Music and Spotify</li>
+      <li><b>System</b> CPU, memory, disk, network, battery</li>
+      <li><b>Launcher</b> search and open any app</li>
+      <li><b>Clipboard</b> searchable history of what you copied</li>
+    </ul>
+  </div>
+</section>
+
+<section class="build" id="build">
+  <div class="build-copy">
+    <h2>Your widget is a folder.</h2>
+    <p>
+      No SDK, no build step, no signing. Drop a folder in and Notchly picks it up
+      immediately; save a file and it reloads while you watch. It's HTML in a webview —
+      the same kind of thing the panel itself is.
+    </p>
+    <p class="quiet">
+      Widgets are sandboxed with an opaque origin. Network, shell and clipboard access
+      are refused until you grant them, and a widget's token is kept in the OS keychain
+      rather than a settings file.
+    </p>
+  </div>
+<pre class="code" aria-label="A widget folder"><span class="c">my-widget/</span>
+  widget.json
+  index.html
+
+<span class="c">// widget.json</span>
+{
+  "id": <span class="s">"com.you.my-widget"</span>,
+  "name": <span class="s">"My Widget"</span>,
+  "permissions": [<span class="s">"network"</span>]
+}
+
+<span class="c">// index.html</span>
+<span class="k">const</span> stats = <span class="k">await</span> notchly.system.stats()
+<span class="k">const</span> city  = <span class="k">await</span> notchly.settings.get(<span class="s">'city'</span>)</pre>
+</section>
+
+<section class="plain">
+  <h2>It doesn't phone home.</h2>
+  <p>
+    No analytics, no accounts, no network requests of its own. Clipboard history stays on
+    your machine. The whole thing is a Rust binary and a folder of HTML you can read.
+  </p>
+</section>
+
+<footer>
+  <div>
+    <a class="get" href="https://github.com/mberrishdev/Notchly/releases/latest">Download Notchly</a>
+    <p class="quiet">
+      Builds are unsigned for now, so macOS calls the app damaged and Windows shows
+      SmartScreen. The readme has the two commands that clear it.
+    </p>
+  </div>
+  <nav>
+    <a href="https://github.com/mberrishdev/Notchly"><svg class="mark" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Source on GitHub</a>
+    <a href="https://github.com/mberrishdev/Notchly/blob/main/docs/WidgetAPI.md">Widget API</a>
+    <a href="https://github.com/mberrishdev/Notchly/issues">Report a problem</a>
+  </nav>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>
