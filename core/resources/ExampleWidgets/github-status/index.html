@@ -134,16 +134,25 @@
        * repository lookup separates them — and only runs when something already failed.
        */
       async function forbiddenReason(repo, token) {
+        // Is the token reaching GitHub at all? /user needs authentication and nothing
+        // else, so a failure here is about the token itself rather than the repository.
+        try {
+          await api('/user', token, 'Token');
+        } catch (error) {
+          return `The token is not being accepted (${error.status}). ` +
+            `Check it is pasted whole and has not expired.`;
+        }
+
+        // The token works. Metadata is mandatory on every fine-grained token, so a
+        // plain lookup says whether this repository is one the token covers.
         try {
           await api(`/repos/${repo}`, token, repo);
           return `${repo}: the token reaches this repository but cannot read it. ` +
             `Set Actions and Pull requests to Read, then press Update.`;
         } catch (error) {
-          if (error.status === 403 || error.status === 404) {
-            return `${repo}: the token does not cover this repository. ` +
-              `Add it under Repository access on the token.`;
-          }
-          return error.message;
+          return `${repo}: the token is valid but cannot see this repository ` +
+            `(${error.status}). Check Repository access on the token, and that the ` +
+            `owner is spelled exactly as GitHub has it.`;
         }
       }
 
