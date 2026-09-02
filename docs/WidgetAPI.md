@@ -69,7 +69,13 @@ Windows — and never written to `settings.json`. It reads back through
 that declared it.
 
 The settings window never shows a stored secret back to anyone, the user included: the
-field reports *Stored* or *Not set* and offers to replace it. Saving an empty field
+field reports *Stored* or *Not set* and offers to replace it.
+
+On macOS the credential store ties permission to the app's signature, so an unsigned
+build asks for the keychain password the first time a secret is read after each new
+build. Choosing **Always Allow** holds until the binary changes again — which during
+`tauri dev` is every rebuild. Notchly reads each secret once per launch rather than on
+every settings call, so this is one prompt, not one per poll. Saving an empty field
 deletes it. Nothing deletes a secret on its own — removing a widget's folder leaves the
 credential filed, because a folder that is briefly unreadable must not cost someone a
 token.
