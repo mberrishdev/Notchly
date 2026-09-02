@@ -127,6 +127,26 @@
         return /^[\w.-]+\/[\w.-]+$/.test(cleaned) ? cleaned : null;
       }
 
+      /**
+       * A 403 on a repository has two causes with different fixes: the token may not
+       * cover the repository at all, or it may cover it without the permissions these
+       * calls need. Metadata is mandatory on every fine-grained token, so a plain
+       * repository lookup separates them — and only runs when something already failed.
+       */
+      async function forbiddenReason(repo, token) {
+        try {
+          await api(`/repos/${repo}`, token, repo);
+          return `${repo}: the token reaches this repository but cannot read it. ` +
+            `Set Actions and Pull requests to Read, then press Update.`;
+        } catch (error) {
+          if (error.status === 403 || error.status === 404) {
+            return `${repo}: the token does not cover this repository. ` +
+              `Add it under Repository access on the token.`;
+          }
+          return error.message;
+        }
+      }
+
       function fail(message) {
         el('status').textContent = message;
         el('status').className = 'status error';
@@ -188,20 +208,21 @@
         }
         if (!repos.length) return say('Add a repository — owner/name — in Settings.');
 
-        try {
-          const rows = [];
-          for (const repo of repos) {
+        const rows = [];
+        for (const repo of repos) {
+          try {
             // Sequential on purpose: three repos is six calls, and hammering the API
             // in parallel is how a widget earns a secondary rate limit.
             const [ci, pulls] = [await ciState(repo, token), await openPulls(repo, token)];
             rows.push(repoRow(repo, ci, pulls));
+          } catch (error) {
+            if (error.status === 403) return fail(await forbiddenReason(repo, token));
+            return fail(String(error.message || error));
           }
-          el('repos').replaceChildren(...rows);
-          el('status').hidden = true;
-          el('content').hidden = false;
-        } catch (error) {
-          return fail(String(error.message || error));
         }
+        el('repos').replaceChildren(...rows);
+        el('status').hidden = true;
+        el('content').hidden = false;
 
         // Notifications get their own attempt. `GET /notifications` is closed to
         // fine-grained tokens, which is what the settings help asks for — so the
