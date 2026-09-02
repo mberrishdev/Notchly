@@ -1,6 +1,6 @@
 import { panel, listen, invoke } from "./lib/bridge.js";
 import { renderShape } from "./lib/panel-view.js";
-import { renderIdleHandle } from "./lib/idle-handle.js";
+import { renderIdleHandle, popoverContent } from "./lib/idle-handle.js";
 import * as builtin from "./lib/builtin-widgets.js";
 import { createWidgetCard, startBridgeRelay, trackManifest, forgetFrames } from "./lib/widget-host.js";
 
@@ -37,11 +37,65 @@ function render() {
     } else {
       body.hidden = true;
       handle.hidden = !metrics.showsContent;
-      if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
+      if (metrics.showsContent) renderIdleHandle(handle, settings, ambient, metrics.handleRing);
     }
   };
 
+  // Drawn outside the content swap: that is deliberately delayed until part-way
+  // through the open animation, which left the popover painted over the panel as it
+  // grew. Whether a card is showing is a state, not a stage of the animation.
+  renderPopover();
   renderShape(metrics, settings, swapContent);
+}
+
+/**
+ * Places the popover beside the handle, in the room the enlarged window buys.
+ *
+ * Rust decides whether one is showing and for which reading; this only draws it. The
+ * position comes from the same metrics the shape is drawn from, so the card tracks the
+ * handle rather than guessing where it ended up.
+ */
+function renderPopover() {
+  const node = document.getElementById("popover");
+  if (!node) return;
+  const chip = current?.popover;
+  const metrics = current?.metrics;
+  if (!chip || !metrics || metrics.expanded) {
+    node.hidden = true;
+    return;
+  }
+
+  node.innerHTML = popoverContent(chip, ambient);
+  node.dataset.edge = current.settings.edge;
+  // Rust sizes the card, because the hover zones are measured against the same number.
+  if (metrics.popoverWidth) node.style.width = `${metrics.popoverWidth}px`;
+  node.style.left = node.style.right = node.style.top = node.style.bottom = "";
+
+  const GAP = 10;
+  const alongCentre = (start, length) => `${start + length / 2}px`;
+  switch (current.settings.edge) {
+    case "trailing":
+      node.style.right = `${metrics.windowWidth - metrics.offsetX + GAP}px`;
+      node.style.top = alongCentre(metrics.offsetY, metrics.shapeHeight);
+      node.style.transform = "translateY(-50%)";
+      break;
+    case "leading":
+      node.style.left = `${metrics.offsetX + metrics.shapeWidth + GAP}px`;
+      node.style.top = alongCentre(metrics.offsetY, metrics.shapeHeight);
+      node.style.transform = "translateY(-50%)";
+      break;
+    case "top":
+      node.style.top = `${metrics.offsetY + metrics.shapeHeight + GAP}px`;
+      node.style.left = alongCentre(metrics.offsetX, metrics.shapeWidth);
+      node.style.transform = "translateX(-50%)";
+      break;
+    default:
+      node.style.bottom = `${metrics.windowHeight - metrics.offsetY + GAP}px`;
+      node.style.left = alongCentre(metrics.offsetX, metrics.shapeWidth);
+      node.style.transform = "translateX(-50%)";
+      break;
+  }
+  node.hidden = false;
 }
 
 const BUILTIN_IDS = ["clock", "media", "system", "launcher", "clipboard"];

@@ -15,7 +15,7 @@ to reposition, shows a configurable ambient strip while closed, hosts five built
 widgets plus any number of custom ones with hot reload, and has a five-pane settings
 window. Windows runtime behavior still needs validation on Windows hardware.
 
-85 Rust tests cover the notch geometry, window frames, drag placement, idle handle
+98 Rust tests cover the notch geometry, window frames, drag placement, idle handle
 sizing, settings decoding, permission gating, the widget manifest format, the widget
 protocol's path handling and content policy, the bridge's HTTP surface, and launcher
 search ranking. They are the parts where a silent mistake would be invisible on screen;
@@ -79,7 +79,7 @@ The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is f
 ## Testing
 
 ```bash
-cd core && cargo test          # 85 tests, headless
+cd core && cargo test          # 98 tests, headless
 npx tauri build --bundles app       # release bundle
 ```
 

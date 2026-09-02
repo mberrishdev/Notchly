@@ -23,11 +23,17 @@ pub struct PanelSnapshot {
     pub expanded: bool,
     pub metrics: crate::geometry::PanelMetrics,
     pub settings: Settings,
+    /// The reading the pointer is resting on, while the panel is still closed. The
+    /// window is already at its open size when this is set — the shape stays the
+    /// handle, and the room that buys is where the popover is drawn.
+    pub popover: Option<crate::settings::IdleChip>,
 }
 
 pub struct PanelState {
     pub settings: Settings,
     pub expanded: bool,
+    /// Which reading the pointer is resting on, if any. Never set while expanded.
+    pub popover: Option<crate::settings::IdleChip>,
     /// Bumped on every state change so a stale collapse timer can tell it was replaced.
     generation: Arc<AtomicU64>,
     pub dragging: bool,
@@ -58,6 +64,7 @@ impl PanelState {
         Self {
             settings,
             expanded: false,
+            popover: None,
             generation: Arc::new(AtomicU64::new(0)),
             dragging: false,
             ambient: Default::default(),
@@ -197,13 +204,20 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
         return;
     };
 
+    let popover = with_state(app, |state| state.popover).flatten();
+    // A popover needs the room the open panel gets, but nothing about the shape changes:
+    // it is still the handle, merely drawn inside a larger window. `metrics_in` already
+    // separates those two questions for the close animation.
+    let window_open = expanded || popover.is_some();
+
     let geometry = PanelGeometry::new(&settings, display.logical, settings.enabled_slot_count());
-    apply_frame(&window, &display, geometry.window_frame(expanded));
+    apply_frame(&window, &display, geometry.window_frame(window_open));
 
     let snapshot = PanelSnapshot {
         expanded,
-        metrics: geometry.metrics(expanded),
+        metrics: geometry.metrics_in(expanded, window_open),
         settings: settings.clone(),
+        popover,
     };
     let handle = app.clone();
     with_state(app, |state| {
@@ -211,6 +225,25 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
         state.ambient.sync(&handle, expanded, &settings);
     });
     let _ = app.emit("panel-state", snapshot);
+}
+
+/// Shows, moves or clears the popover. Returns true when something actually changed,
+/// so the caller can avoid refreshing the window on every poll.
+pub fn set_popover(app: &AppHandle, chip: Option<crate::settings::IdleChip>) -> bool {
+    let changed = with_state(app, |state| {
+        // A popover under an open panel would be drawn behind it.
+        let wanted = if state.expanded { None } else { chip };
+        if state.popover == wanted {
+            return false;
+        }
+        state.popover = wanted;
+        true
+    })
+    .unwrap_or(false);
+    if changed {
+        refresh(app, with_state(app, |state| state.expanded).unwrap_or(false));
+    }
+    changed
 }
 
 pub fn open(app: &AppHandle) {
@@ -221,6 +254,8 @@ pub fn open(app: &AppHandle) {
             return;
         }
         guard.expanded = true;
+        // The panel supersedes the reading that was being pointed at.
+        guard.popover = None;
         guard.generation.fetch_add(1, Ordering::SeqCst);
     }
     // Grow the (transparent) window first so the animation has room to play out.
@@ -260,6 +295,7 @@ pub fn close(app: &AppHandle) {
                 expanded: false,
                 metrics: geometry.metrics_in(false, true),
                 settings,
+                popover: None,
             },
         );
     }

@@ -31,6 +31,42 @@ function dateChip(stacked) {
     : `<div class="chip"><span class="tertiary small">${weekday}</span><span class="primary">${day}</span></div>`;
 }
 
+/**
+ * A reading whose value is a fraction of a known whole, drawn as an arc.
+ *
+ * The arc carries the glance and the number carries the detail. At handle size a bare
+ * percentage has to be stopped at and read, while a ring's fill is legible in passing —
+ * and a colour change is visible without reading anything at all.
+ *
+ * `ring` arrives from Rust rather than being computed here: it is the diameter the
+ * handle was measured against, so deriving a second one would let the strip's size and
+ * its contents disagree.
+ */
+function arcChip(icon, fraction, tone, stacked, ring) {
+  const value = Math.min(1, Math.max(0, fraction ?? 0));
+  const stroke = Math.max(2, ring * 0.08);
+  const radius = (ring - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const filled = circumference * value;
+  const mid = ring / 2;
+  // Sized in pixels, not a percentage: the glyph's parent is shrink-to-fit, so a
+  // percentage there resolves against a box that is itself sized by this element.
+  const glyph = Math.round(ring * 0.5);
+  return `<div class="chip chip-arc ${stacked ? "stacked" : ""} tone-${tone}">
+    <span class="arc-well" style="width:${ring}px;height:${ring}px">
+      <svg class="arc-rings" viewBox="0 0 ${ring} ${ring}" width="${ring}" height="${ring}" aria-hidden="true">
+        <circle class="arc-track" cx="${mid}" cy="${mid}" r="${radius}" fill="none" stroke-width="${stroke}"/>
+        <circle class="arc-value" cx="${mid}" cy="${mid}" r="${radius}" fill="none" stroke-width="${stroke}"
+                stroke-linecap="round" transform="rotate(-90 ${mid} ${mid})"
+                stroke-dasharray="${filled.toFixed(2)} ${(circumference - filled).toFixed(2)}"/>
+      </svg>
+      <span class="glyph" style="width:${glyph}px;height:${glyph}px">${icon}</span>
+    </span>
+    <span class="value">${percent(value)}</span>
+  </div>`;
+}
+
+/** A reading with no whole to be a fraction of: text, and no ring drawn around nothing. */
 function readingChip(icon, value, tone, stacked) {
   return `<div class="chip ${stacked ? "stacked" : ""} tone-${tone}">
     <span class="glyph">${icon}</span><span class="value">${value}</span>
@@ -69,7 +105,7 @@ function widgetIconsChip(widgetIds, stacked) {
   </div>`;
 }
 
-export function renderIdleHandle(container, settings, data) {
+export function renderIdleHandle(container, settings, data, ring) {
   const stacked = growsHorizontally(settings.edge);
   const metrics = data.metrics ?? {};
   const html = (settings.handleChips ?? [])
@@ -80,11 +116,11 @@ export function renderIdleHandle(container, settings, data) {
         case "date":
           return dateChip(stacked);
         case "cpu":
-          return readingChip(icons.cpu, percent(metrics.cpu), loadTone(metrics.cpu ?? 0), stacked);
+          return arcChip(icons.cpu, metrics.cpu, loadTone(metrics.cpu ?? 0), stacked, ring);
         case "memory":
-          return readingChip(icons.memory, percent(metrics.memory), loadTone(metrics.memory ?? 0), stacked);
+          return arcChip(icons.memory, metrics.memory, loadTone(metrics.memory ?? 0), stacked, ring);
         case "battery":
-          return batteryChip(metrics.battery, stacked);
+          return batteryChip(metrics.battery, stacked, ring);
         case "nowPlaying":
           return nowPlayingChip(data.media);
         case "clipboard":
@@ -101,10 +137,49 @@ export function renderIdleHandle(container, settings, data) {
   container.innerHTML = html;
 }
 
-function batteryChip(battery, stacked) {
-  // A machine with no battery reads 0%, which must not be shown as critical.
+function batteryChip(battery, stacked, ring) {
+  // A machine with no battery reads 0%, which must not be drawn as an empty ring —
+  // there is no charge to be a fraction of, so it falls back to a plain reading.
   if (!battery?.present) return readingChip(icons.power, "AC", "muted", stacked);
   const level = battery.level ?? 0;
   const tone = battery.charging ? "good" : level < 0.15 ? "danger" : level < 0.3 ? "caution" : "normal";
-  return readingChip(battery.charging ? icons.charging : icons.battery, percent(level), tone, stacked);
+  return arcChip(battery.charging ? icons.charging : icons.battery, level, tone, stacked, ring);
+}
+
+/** One labelled bar in a popover. */
+function meter(label, fraction, tone) {
+  const value = Math.min(1, Math.max(0, fraction ?? 0));
+  return `<div class="pop-row">
+    <div class="pop-line"><span class="pop-label">${label}</span><span class="pop-value">${percent(value)}</span></div>
+    <div class="pop-track"><span class="pop-fill tone-${tone}" style="width:${(value * 100).toFixed(1)}%"></span></div>
+  </div>`;
+}
+
+/**
+ * The detail behind one reading, shown while the pointer rests on it.
+ *
+ * Only the readings that draw an arc get one — they are the ones with more to say than
+ * the number already on screen. Anything else opens the panel instead, as it always has.
+ */
+export function popoverContent(chip, data) {
+  const metrics = data.metrics ?? {};
+  if (chip === "battery") {
+    const battery = metrics.battery ?? {};
+    const level = battery.level ?? 0;
+    const tone = battery.charging ? "good" : level < 0.15 ? "danger" : level < 0.3 ? "caution" : "normal";
+    const state = battery.charging ? "Charging" : "On battery";
+    const detail = battery.minutesRemaining
+      ? `${Math.round(battery.minutesRemaining / 60)}h ${battery.minutesRemaining % 60}m ${battery.charging ? "to full" : "left"}`
+      : state;
+    return `<div class="pop-head"><span class="glyph">${battery.charging ? icons.charging : icons.battery}</span>Battery</div>
+      ${meter("Charge", level, tone)}
+      <div class="pop-foot"><span>${state}</span><span class="pop-strong">${detail}</span></div>`;
+  }
+
+  const heaviest = metrics.topProcesses?.[0];
+  return `<div class="pop-head"><span class="glyph">${icons.cpu}</span>System</div>
+    ${meter("CPU", metrics.cpu, loadTone(metrics.cpu ?? 0))}
+    ${meter("Memory", metrics.memory, loadTone(metrics.memory ?? 0))}
+    ${meter("Disk", metrics.disk, "muted")}
+    ${heaviest ? `<div class="pop-foot"><span>Heaviest right now</span><span class="pop-strong">${heaviest.name}</span></div>` : ""}`;
 }

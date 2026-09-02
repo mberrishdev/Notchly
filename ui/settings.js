@@ -32,7 +32,7 @@ function fallbackSettings() {
     handleChips: ["clock"],
     handleThickness: 5,
     handleLength: 108,
-    handleContentThickness: 30,
+    handleContentThickness: 44,
     slots: [],
     shellApprovedWidgets: [],
     networkApprovedWidgets: [],
