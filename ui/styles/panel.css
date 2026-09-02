@@ -141,6 +141,63 @@ body[data-hover="true"] .idle-handle {
   color: var(--text-tertiary);
 }
 
+/* An arc reading. The ring carries the tone, the number stays plain white — colour on
+   both would say the same thing twice and leave the number harder to read. */
+.chip-arc {
+  gap: 4px;
+}
+.chip-arc.stacked {
+  gap: 2px;
+}
+.arc-well {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.arc-well svg {
+  position: absolute;
+  inset: 0;
+}
+.arc-track {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+.arc-value {
+  stroke: currentColor;
+  transition: stroke-dasharray 0.35s ease;
+}
+.arc-well .glyph-svg {
+  width: 44%;
+  height: 44%;
+  color: var(--text-secondary);
+}
+/* Beats `.chip.tone-* .value`, which tints the number on the plain readings. */
+.chip.chip-arc .value {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chip-arc.tone-normal {
+  color: var(--accent);
+}
+.chip-arc.tone-caution {
+  color: var(--caution);
+}
+.chip-arc.tone-danger {
+  color: var(--danger);
+}
+.chip-arc.tone-good {
+  color: var(--good);
+}
+.chip-arc.tone-muted {
+  color: var(--text-tertiary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .arc-value {
+    transition: none;
+  }
+}
+
 .chip-icons {
   display: flex;
   gap: 7px;

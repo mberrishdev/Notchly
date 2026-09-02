@@ -38,6 +38,10 @@ pub struct HandleLayout {
     pub extent: f64,
     /// False when there are no chips, i.e. the plain line.
     pub shows_content: bool,
+    /// Diameter of the arc a reading draws. Kept here because it is what the chips were
+    /// measured against — the frontend is handed this number rather than deriving its
+    /// own, so the handle's size and its contents cannot disagree.
+    pub ring: f64,
 }
 
 pub const CHIP_SPACING: f64 = 5.0;
@@ -54,19 +58,22 @@ impl HandleLayout {
                 depth: settings.handle_thickness.max(2.0),
                 extent: settings.handle_length.max(12.0),
                 shows_content: false,
+                ring: 0.0,
             };
         }
         let horizontal = settings.edge.grows_horizontally();
+        let ring = crate::settings::ring_diameter(settings.handle_content_thickness);
         let content: f64 = settings
             .handle_chips
             .iter()
-            .map(|chip| chip.extent(horizontal, widget_count))
+            .map(|chip| chip.extent(horizontal, widget_count, ring))
             .sum();
         let gaps = CHIP_SPACING * settings.handle_chips.len().saturating_sub(1) as f64;
         Self {
             depth: settings.handle_content_thickness.max(18.0),
             extent: (content + gaps + CHIP_END_PADDING * 2.0).max(28.0),
             shows_content: true,
+            ring,
         }
     }
 }
@@ -131,6 +138,9 @@ pub struct PanelMetrics {
     /// to be told which window the offsets belong to.
     pub window_width: f64,
     pub window_height: f64,
+    /// Diameter of the arc an idle reading draws. Computed here so the size the handle
+    /// was measured against and the size the frontend paints cannot drift apart.
+    pub handle_ring: f64,
 }
 
 pub struct PanelGeometry {
@@ -289,6 +299,7 @@ impl PanelGeometry {
             offset_y,
             window_width: window.width,
             window_height: window.height,
+            handle_ring: self.handle.ring,
         }
     }
 }
@@ -417,17 +428,49 @@ mod tests {
         s.handle_chips = vec![IdleChip::Clock];
         let one = HandleLayout::resolve(&s, 5);
         assert!(one.shows_content);
-        assert_eq!(one.depth, 30.0);
+        // The configured thickness, not a number this test happens to know.
+        assert_eq!(one.depth, s.handle_content_thickness);
 
         s.handle_chips = vec![IdleChip::Clock, IdleChip::NowPlaying];
         assert!(HandleLayout::resolve(&s, 5).extent > one.extent);
     }
 
     #[test]
+    fn an_arc_chip_grows_with_the_ring_it_draws() {
+        let mut thin = settings(ScreenEdge::Trailing, 0.5);
+        thin.handle_chips = vec![IdleChip::Cpu];
+        thin.handle_content_thickness = 24.0;
+        let mut thick = thin.clone();
+        thick.handle_content_thickness = 44.0;
+
+        let small = HandleLayout::resolve(&thin, 0);
+        let large = HandleLayout::resolve(&thick, 0);
+        assert!(small.ring < large.ring, "{} !< {}", small.ring, large.ring);
+        assert!(small.extent < large.extent, "a smaller ring should need less room");
+    }
+
+    /// A handle someone has already made thin must still hold its readings.
+    #[test]
+    fn the_ring_never_outgrows_the_handle_it_sits_in() {
+        for thickness in [18.0, 24.0, 30.0, 44.0, 90.0] {
+            let ring = crate::settings::ring_diameter(thickness);
+            assert!(ring <= thickness, "ring {ring} does not fit in {thickness}");
+            assert!(ring >= 18.0, "ring {ring} is too small to read");
+        }
+    }
+
+    #[test]
+    fn a_plain_line_draws_no_ring() {
+        let line = HandleLayout::resolve(&settings(ScreenEdge::Trailing, 0.5), 5);
+        assert_eq!(line.ring, 0.0);
+    }
+
+    #[test]
     fn handle_extent_accounts_for_spacing_between_chips() {
         let mut s = settings(ScreenEdge::Trailing, 0.5);
         s.handle_chips = vec![IdleChip::Clock, IdleChip::Cpu, IdleChip::Battery];
-        let content: f64 = s.handle_chips.iter().map(|c| c.extent(true, 5)).sum();
+        let ring = crate::settings::ring_diameter(s.handle_content_thickness);
+        let content: f64 = s.handle_chips.iter().map(|c| c.extent(true, 5, ring)).sum();
         let expected = content + CHIP_SPACING * 2.0 + CHIP_END_PADDING * 2.0;
         assert!((HandleLayout::resolve(&s, 5).extent - expected).abs() < 0.001);
     }

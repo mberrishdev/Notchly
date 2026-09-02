@@ -37,7 +37,7 @@ function render() {
     } else {
       body.hidden = true;
       handle.hidden = !metrics.showsContent;
-      if (metrics.showsContent) renderIdleHandle(handle, settings, ambient);
+      if (metrics.showsContent) renderIdleHandle(handle, settings, ambient, metrics.handleRing);
     }
   };
 

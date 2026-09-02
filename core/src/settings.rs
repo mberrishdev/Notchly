@@ -61,33 +61,55 @@ impl IdleChip {
     /// Room this chip needs along the edge, reserved whether or not it currently has a
     /// value so the handle never resizes underneath the pointer.
     ///
+    /// True for the readings that draw an arc rather than a bare number: the ones whose
+    /// value is a fraction of a known whole, and so has somewhere to travel.
+    pub fn draws_arc(self) -> bool {
+        matches!(self, IdleChip::Cpu | IdleChip::Memory | IdleChip::Battery)
+    }
+
     /// `grows_horizontally` is true on the left and right edges, where chips stack in a
     /// column — so it asks for the chip's height. On the top and bottom they sit side
     /// by side and it asks for the width, which is larger for anything rendering text
     /// on one line.
-    pub fn extent(self, grows_horizontally: bool, widget_count: usize) -> f64 {
+    ///
+    /// `ring` is `ring_diameter` for the handle in question: an arc chip is sized around
+    /// the circle it draws, so a handle the user has made thinner produces smaller
+    /// chips rather than overflowing ones.
+    pub fn extent(self, grows_horizontally: bool, widget_count: usize, ring: f64) -> f64 {
         if matches!(self, IdleChip::WidgetIcons) {
             let each: f64 = if grows_horizontally { 19.0 } else { 21.0 };
             return each.max(each * widget_count as f64);
         }
+        if self.draws_arc() {
+            // Stacked, the number sits under the ring; side by side, beside it.
+            return if grows_horizontally { ring + 15.0 } else { ring + 30.0 };
+        }
         if grows_horizontally {
             match self {
                 IdleChip::Clock | IdleChip::Date => 30.0,
-                IdleChip::Cpu | IdleChip::Memory | IdleChip::Battery => 28.0,
                 IdleChip::NowPlaying | IdleChip::Clipboard => 24.0,
-                IdleChip::WidgetIcons => 0.0,
+                _ => 24.0,
             }
         } else {
             match self {
                 IdleChip::Clock => 40.0,
                 IdleChip::Date => 44.0,
-                IdleChip::Cpu | IdleChip::Memory | IdleChip::Battery => 44.0,
                 IdleChip::NowPlaying => 26.0,
                 IdleChip::Clipboard => 32.0,
-                IdleChip::WidgetIcons => 0.0,
+                _ => 32.0,
             }
         }
     }
+}
+
+/// Diameter of the arc a reading draws in the idle handle.
+///
+/// Derived from the handle's thickness rather than fixed, so a handle someone has
+/// already sized keeps working: the ring shrinks to fit instead of overflowing. The
+/// floor is where a stroke and an icon stop being distinguishable; the ceiling is where
+/// a bigger ring stops reading as a chip and starts reading as a dial.
+pub fn ring_diameter(content_thickness: f64) -> f64 {
+    (content_thickness - 8.0).clamp(18.0, 34.0)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,7 +157,7 @@ defaulted!(d_panel_width, f64, 372.0);
 defaulted!(d_panel_height, f64, 540.0);
 defaulted!(d_handle_thickness, f64, 5.0);
 defaulted!(d_handle_length, f64, 108.0);
-defaulted!(d_handle_content_thickness, f64, 30.0);
+defaulted!(d_handle_content_thickness, f64, 44.0);
 defaulted!(d_corner_radius, f64, 26.0);
 defaulted!(d_activation, ActivationMode, ActivationMode::Hover);
 defaulted!(d_open_delay, f64, 0.14);
@@ -344,13 +366,13 @@ mod tests {
 
     #[test]
     fn stacked_chips_need_less_room_than_ones_on_a_single_line() {
-        assert!(IdleChip::Clock.extent(true, 0) < IdleChip::Clock.extent(false, 0));
+        assert!(IdleChip::Clock.extent(true, 0, 34.0) < IdleChip::Clock.extent(false, 0, 34.0));
     }
 
     #[test]
     fn widget_icons_chip_scales_with_the_number_of_widgets() {
-        assert!(IdleChip::WidgetIcons.extent(true, 2) < IdleChip::WidgetIcons.extent(true, 6));
+        assert!(IdleChip::WidgetIcons.extent(true, 2, 34.0) < IdleChip::WidgetIcons.extent(true, 6, 34.0));
         // An empty panel still draws a placeholder glyph.
-        assert!(IdleChip::WidgetIcons.extent(true, 0) > 0.0);
+        assert!(IdleChip::WidgetIcons.extent(true, 0, 34.0) > 0.0);
     }
 }
