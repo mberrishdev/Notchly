@@ -5,7 +5,7 @@
 //! removes the axis flip the Swift version needed, so alignment reads the same way on
 //! every edge — 0 is always top or left.
 
-use crate::settings::{ScreenEdge, Settings};
+use crate::settings::{IdleChip, ScreenEdge, Settings};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -48,6 +48,12 @@ pub const CHIP_SPACING: f64 = 5.0;
 pub const CHIP_END_PADDING: f64 = 9.0;
 /// Room reserved around the open panel for its drop shadow.
 pub const SHADOW_MARGIN: f64 = 34.0;
+/// The popover's own footprint. The frontend is handed the width rather than choosing
+/// it, because the hover zones have to know exactly where the card is: reaching over to
+/// read one must not be mistaken for the push that opens the panel.
+pub const POPOVER_WIDTH: f64 = 232.0;
+pub const POPOVER_GAP: f64 = 10.0;
+
 /// Slack around the idle handle so the pointer doesn't need pixel precision.
 pub const HOVER_BUFFER: f64 = 22.0;
 
@@ -76,6 +82,45 @@ impl HandleLayout {
             ring,
         }
     }
+}
+
+/// Where one chip sits along the handle: its start offset from the handle's leading
+/// end, and how much room it takes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ChipSpan {
+    pub chip: IdleChip,
+    pub start: f64,
+    pub length: f64,
+}
+
+/// Lays the chips out along the handle.
+///
+/// The frontend arranges the same chips with the same gaps, but only Rust needs to
+/// answer "which one is the pointer on" — the web view cannot be asked, because a
+/// non-activating panel does not deliver reliable pointer events. So the arithmetic
+/// lives here, beside the sizing it has to agree with.
+pub fn chip_spans(settings: &Settings, widget_count: usize) -> Vec<ChipSpan> {
+    let horizontal = settings.edge.grows_horizontally();
+    let ring = crate::settings::ring_diameter(settings.handle_content_thickness);
+    let mut spans = Vec::with_capacity(settings.handle_chips.len());
+    let mut cursor = CHIP_END_PADDING;
+    for chip in &settings.handle_chips {
+        let length = chip.extent(horizontal, widget_count, ring);
+        spans.push(ChipSpan { chip: *chip, start: cursor, length });
+        cursor += length + CHIP_SPACING;
+    }
+    spans
+}
+
+/// The chip at `offset` along the handle, if the pointer is on one at all.
+///
+/// The gaps between chips deliberately belong to no chip: sliding across the strip
+/// should not flicker a popover through every reading on the way past.
+pub fn chip_at(spans: &[ChipSpan], offset: f64) -> Option<IdleChip> {
+    spans
+        .iter()
+        .find(|span| offset >= span.start && offset < span.start + span.length)
+        .map(|span| span.chip)
 }
 
 /// Where the panel should dock for a given pointer position.
@@ -141,6 +186,8 @@ pub struct PanelMetrics {
     /// Diameter of the arc an idle reading draws. Computed here so the size the handle
     /// was measured against and the size the frontend paints cannot drift apart.
     pub handle_ring: f64,
+    /// How wide the popover is drawn. Same reason: the hover zones depend on it.
+    pub popover_width: f64,
 }
 
 pub struct PanelGeometry {
@@ -262,11 +309,6 @@ impl PanelGeometry {
         }
     }
 
-    /// What the frontend draws, in window-local coordinates.
-    pub fn metrics(&self, expanded: bool) -> PanelMetrics {
-        self.metrics_in(expanded, expanded)
-    }
-
     /// Metrics for `expanded`, positioned inside the window sized for `window_state`.
     pub fn metrics_in(&self, expanded: bool, window_state: bool) -> PanelMetrics {
         let inverse = self.inverse_radius(expanded);
@@ -300,6 +342,7 @@ impl PanelGeometry {
             window_width: window.width,
             window_height: window.height,
             handle_ring: self.handle.ring,
+            popover_width: POPOVER_WIDTH,
         }
     }
 }
@@ -436,6 +479,48 @@ mod tests {
     }
 
     #[test]
+    fn chips_are_laid_out_end_to_end_with_a_gap_between() {
+        let mut s = settings(ScreenEdge::Trailing, 0.5);
+        s.handle_chips = vec![IdleChip::Clock, IdleChip::Cpu];
+        let spans = chip_spans(&s, 0);
+
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0].start, CHIP_END_PADDING);
+        assert_eq!(spans[1].start, spans[0].start + spans[0].length + CHIP_SPACING);
+    }
+
+    #[test]
+    fn the_pointer_finds_the_chip_it_is_on() {
+        let mut s = settings(ScreenEdge::Trailing, 0.5);
+        s.handle_chips = vec![IdleChip::Clock, IdleChip::Cpu];
+        let spans = chip_spans(&s, 0);
+
+        let middle_of_first = spans[0].start + spans[0].length / 2.0;
+        let middle_of_second = spans[1].start + spans[1].length / 2.0;
+        assert_eq!(chip_at(&spans, middle_of_first), Some(IdleChip::Clock));
+        assert_eq!(chip_at(&spans, middle_of_second), Some(IdleChip::Cpu));
+    }
+
+    /// Sliding down the strip must not flash a popover through every reading on the way.
+    #[test]
+    fn the_gaps_between_chips_belong_to_no_chip() {
+        let mut s = settings(ScreenEdge::Trailing, 0.5);
+        s.handle_chips = vec![IdleChip::Clock, IdleChip::Cpu];
+        let spans = chip_spans(&s, 0);
+
+        let in_the_gap = spans[0].start + spans[0].length + CHIP_SPACING / 2.0;
+        assert_eq!(chip_at(&spans, in_the_gap), None);
+        assert_eq!(chip_at(&spans, 0.0), None, "the end padding is not a chip");
+        assert_eq!(chip_at(&spans, 10_000.0), None, "past the end is not a chip");
+    }
+
+    #[test]
+    fn a_handle_with_no_chips_has_nothing_to_point_at() {
+        let s = settings(ScreenEdge::Trailing, 0.5);
+        assert!(chip_spans(&s, 0).is_empty());
+    }
+
+    #[test]
     fn an_arc_chip_grows_with_the_ring_it_draws() {
         let mut thin = settings(ScreenEdge::Trailing, 0.5);
         thin.handle_chips = vec![IdleChip::Cpu];
@@ -484,7 +569,7 @@ mod tests {
             (ScreenEdge::Bottom, 3),
         ] {
             let g = geometry(edge, 0.5);
-            let m = g.metrics(true);
+            let m = g.metrics_in(true, true);
             match probe {
                 0 => assert!((m.offset_x + m.shape_width - m.window_width).abs() < 0.001),
                 1 => assert!(m.offset_x.abs() < 0.001),

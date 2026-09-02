@@ -247,6 +247,92 @@ body[data-hover="true"] .idle-handle {
   50% { height: 11px; }
 }
 
+/* The popover: the middle state between the handle and the whole panel. It lives
+   outside the clip layer, so it is positioned in window coordinates from the same
+   metrics the shape is drawn from. */
+#popover {
+  position: absolute;
+  /* Below the panel body, so a late frame can never paint it over an opening panel. */
+  z-index: 1;
+  width: 232px;
+  box-sizing: border-box;
+  background: var(--shell);
+  border: 0.5px solid var(--hairline-strong);
+  border-radius: 14px;
+  padding: 13px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: popover-in 0.13s ease-out;
+}
+@keyframes popover-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #popover { animation: none; }
+}
+.pop-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pop-head .glyph {
+  color: var(--accent);
+}
+.pop-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pop-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.pop-label {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.pop-value {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pop-track {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.pop-fill {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.pop-fill.tone-caution { background: var(--caution); }
+.pop-fill.tone-danger { background: var(--danger); }
+.pop-fill.tone-good { background: var(--good); }
+.pop-fill.tone-muted { background: rgba(255, 255, 255, 0.42); }
+.pop-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 9px;
+  border-top: 1px solid var(--hairline);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.pop-strong {
+  color: var(--text);
+}
+
 /* Open panel */
 #panel-body {
   display: flex;

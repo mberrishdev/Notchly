@@ -19,6 +19,10 @@
     <path id="hairline" />
   </svg>
 
+  <!-- Outside the clip layer on purpose: the popover sits in the window's empty space
+       beside the handle, where the notch shape's clip path would cut it away. -->
+  <div id="popover" hidden></div>
+
   <div id="clip-layer">
     <div id="content">
     <div id="idle-handle" class="idle-handle" hidden></div>
