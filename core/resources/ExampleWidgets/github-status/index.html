@@ -27,20 +27,6 @@
       font-size: 10px; color: var(--notchly-text-tertiary);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
-    .inbox {
-      margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--notchly-hairline);
-      font-size: 10.5px; line-height: 1.5; color: var(--notchly-text-secondary);
-      cursor: default;
-    }
-    .inbox b { color: var(--notchly-text); font-weight: 600; }
-    .inbox:hover { color: var(--notchly-accent); }
-    /* Not a count but an explanation of why there isn't one — so it reads as an aside,
-       is not offered as something to click, and has room to wrap onto a second line. */
-    .inbox.muted {
-      font-size: 10px; line-height: 1.55; color: var(--notchly-text-tertiary);
-      text-wrap: pretty;
-    }
-    .inbox.muted:hover { color: var(--notchly-text-tertiary); }
     .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
     .status.error { color: #FF8A9B; text-align: left; }
   </style>
@@ -49,7 +35,6 @@
   <div id="status" class="status">Loading…</div>
   <div id="content" hidden>
     <div id="repos"></div>
-    <div id="inbox" class="inbox" hidden></div>
   </div>
 
   <script>
@@ -266,34 +251,6 @@
         el('status').hidden = true;
         el('content').hidden = false;
 
-        // Notifications get their own attempt. `GET /notifications` is closed to
-        // fine-grained tokens, which is what the settings help asks for — so the
-        // common case is that this one call fails while every other one worked.
-        // Losing the inbox line must not take the repository rows with it.
-        const inbox = el('inbox');
-        if (settings.notifications === false) {
-          inbox.hidden = true;
-          return;
-        }
-        try {
-          const unread = await api('/notifications?all=false', token, 'Notifications');
-          const count = Array.isArray(unread) ? unread.length : 0;
-          inbox.replaceChildren();
-          const strong = document.createElement('b');
-          strong.textContent = String(count);
-          inbox.append(strong, document.createTextNode(` unread notification${count === 1 ? '' : 's'}`));
-          inbox.onclick = () => notchly.open('https://github.com/notifications');
-          inbox.className = 'inbox';
-          inbox.hidden = false;
-        } catch (error) {
-          inbox.replaceChildren();
-          inbox.textContent = error.status === 403
-            ? 'Notifications need a classic token with the notifications scope.'
-            : error.message;
-          inbox.onclick = null;
-          inbox.className = 'inbox muted';
-          inbox.hidden = false;
-        }
       }
 
       load();
