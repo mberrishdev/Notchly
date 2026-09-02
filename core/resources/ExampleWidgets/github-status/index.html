@@ -75,20 +75,31 @@
         return JSON.parse(response.body);
       }
 
+      /** GitHub explains itself in the body. Quote it rather than paraphrasing. */
+      function githubSays(body) {
+        try {
+          const message = JSON.parse(body).message;
+          return typeof message === 'string' && message ? message : null;
+        } catch {
+          return null;
+        }
+      }
+
       function explain(status, subject, body) {
-        if (status === 401) return 'Token rejected. Check it in Settings.';
+        const said = githubSays(body);
+        if (status === 401) return `${subject}: ${said ?? 'token rejected'}. Check it in Settings.`;
+        if (status === 404) return `${subject}: ${said ?? 'not found'}. Check the name and the token’s access.`;
         if (status === 403 || status === 429) {
-          // GitHub uses 403 for both "your token may not" and "you have asked too
-          // often", and only the body tells them apart — so read it rather than
-          // offering the user both and letting them guess.
           if (/rate limit/i.test(body || '')) {
             return `${subject}: rate limited. It will work again shortly.`;
           }
-          return `${subject}: the token cannot read this. A fine-grained token needs ` +
-            `Actions and Pull requests set to Read on the repository.`;
+          // "Resource not accessible by personal access token" is GitHub's way of
+          // saying the token type or its permissions do not allow this call, and it
+          // is more precise than anything paraphrased.
+          return `${subject}: ${said ?? 'forbidden'}. A fine-grained token needs ` +
+            `Actions and Pull requests set to Read.`;
         }
-        if (status === 404) return `${subject}: not found. Check the name, or the token’s access.`;
-        return `${subject}: GitHub returned ${status}.`;
+        return `${subject}: ${said ?? `GitHub returned ${status}`}.`;
       }
 
       /** The latest workflow run on the default branch, reduced to one word. */
@@ -134,13 +145,18 @@
        * repository lookup separates them — and only runs when something already failed.
        */
       async function forbiddenReason(repo, token) {
-        // Is the token reaching GitHub at all? /user needs authentication and nothing
-        // else, so a failure here is about the token itself rather than the repository.
+        // Is the token reaching GitHub at all? /rate_limit answers for every kind of
+        // token, costs no quota, and says so plainly: an authenticated caller gets
+        // 5000 an hour, an anonymous one gets 60. /user is not a safe probe here —
+        // fine-grained tokens can be refused it outright.
         try {
-          await api('/user', token, 'Token');
+          const limits = await api('/rate_limit', token, 'Token');
+          if ((limits?.resources?.core?.limit ?? 0) <= 60) {
+            return 'The token is not reaching GitHub — requests are going out ' +
+              'unauthenticated. Re-enter it in Settings and press Save.';
+          }
         } catch (error) {
-          return `The token is not being accepted (${error.status}). ` +
-            `Check it is pasted whole and has not expired.`;
+          return `The token was refused: ${error.message}`;
         }
 
         // The token works. Metadata is mandatory on every fine-grained token, so a
