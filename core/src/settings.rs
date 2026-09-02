@@ -109,7 +109,7 @@ impl IdleChip {
 /// floor is where a stroke and an icon stop being distinguishable; the ceiling is where
 /// a bigger ring stops reading as a chip and starts reading as a dial.
 pub fn ring_diameter(content_thickness: f64) -> f64 {
-    (content_thickness - 8.0).clamp(18.0, 34.0)
+    (content_thickness - 6.0).clamp(18.0, 38.0)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

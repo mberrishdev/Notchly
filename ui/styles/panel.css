@@ -151,11 +151,9 @@ body[data-hover="true"] .idle-handle {
 }
 .arc-well {
   position: relative;
-  display: grid;
-  place-items: center;
   flex: 0 0 auto;
 }
-.arc-well svg {
+.arc-well .arc-rings {
   position: absolute;
   inset: 0;
 }
@@ -166,10 +164,20 @@ body[data-hover="true"] .idle-handle {
   stroke: currentColor;
   transition: stroke-dasharray 0.35s ease;
 }
-.arc-well .glyph-svg {
-  width: 44%;
-  height: 44%;
+/* Outranks `.chip .glyph`, which lays the plain readings' glyphs out inline — an arc's
+   glyph is centred in the ring instead, by position rather than by flow. */
+.chip-arc .arc-well .glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  line-height: 0;
   color: var(--text-secondary);
+}
+.chip-arc .arc-well .glyph .glyph-svg {
+  width: 100%;
+  height: 100%;
 }
 /* Beats `.chip.tone-* .value`, which tints the number on the plain readings. */
 .chip.chip-arc .value {
@@ -255,7 +263,7 @@ body[data-hover="true"] .idle-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 18px;
+  height: 22px;
   flex: 0 0 auto;
 }
 #drag-grip {
@@ -275,35 +283,36 @@ body[data-hover="true"] #drag-grip {
 #drag-grip:active {
   cursor: grabbing;
 }
+/* Quiet, never absent. These were faded in on `body[data-hover]`, which is set from
+   document mouseenter/mouseleave — the events a non-activating panel does not deliver
+   reliably, so the only way to reach Settings from the panel could vanish entirely.
+   An affordance may be understated; it may not be conditional on an unreliable signal. */
 .rail-actions {
   position: absolute;
   right: 0;
   display: flex;
   align-items: center;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.14s ease;
-}
-body[data-hover="true"] .rail-actions {
-  opacity: 1;
 }
 .rail-actions button {
   appearance: none;
   border: 0;
   background: transparent;
   color: var(--text-tertiary);
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: 13px;
   cursor: default;
+  opacity: 0.8;
   display: grid;
   place-items: center;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 .rail-actions button:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text);
+  opacity: 1;
 }
 
 #widget-stack {

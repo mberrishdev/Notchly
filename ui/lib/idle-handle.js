@@ -49,15 +49,18 @@ function arcChip(icon, fraction, tone, stacked, ring) {
   const circumference = 2 * Math.PI * radius;
   const filled = circumference * value;
   const mid = ring / 2;
+  // Sized in pixels, not a percentage: the glyph's parent is shrink-to-fit, so a
+  // percentage there resolves against a box that is itself sized by this element.
+  const glyph = Math.round(ring * 0.5);
   return `<div class="chip chip-arc ${stacked ? "stacked" : ""} tone-${tone}">
     <span class="arc-well" style="width:${ring}px;height:${ring}px">
-      <svg viewBox="0 0 ${ring} ${ring}" width="${ring}" height="${ring}" aria-hidden="true">
+      <svg class="arc-rings" viewBox="0 0 ${ring} ${ring}" width="${ring}" height="${ring}" aria-hidden="true">
         <circle class="arc-track" cx="${mid}" cy="${mid}" r="${radius}" fill="none" stroke-width="${stroke}"/>
         <circle class="arc-value" cx="${mid}" cy="${mid}" r="${radius}" fill="none" stroke-width="${stroke}"
                 stroke-linecap="round" transform="rotate(-90 ${mid} ${mid})"
                 stroke-dasharray="${filled.toFixed(2)} ${(circumference - filled).toFixed(2)}"/>
       </svg>
-      <span class="glyph">${icon}</span>
+      <span class="glyph" style="width:${glyph}px;height:${glyph}px">${icon}</span>
     </span>
     <span class="value">${percent(value)}</span>
   </div>`;
