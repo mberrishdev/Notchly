@@ -24,14 +24,15 @@
     <div id="idle-handle" class="idle-handle" hidden></div>
 
     <section id="panel-body" hidden>
-      <header>
-        <span class="dot"></span>
-        <span class="title">Notchly</span>
-        <button id="drag-grip" title="Drag to move the panel to another edge">≡</button>
-        <span class="spacer"></span>
-        <button id="settings-button" title="Settings">⚙</button>
-        <button id="close-button" title="Close">✕</button>
-      </header>
+      <!-- What is left of the panel's own chrome: a grab bar, and two actions that
+           only appear once the pointer is on the panel. -->
+      <div id="panel-rail">
+        <button id="drag-grip" title="Drag to move the panel to another edge"></button>
+        <div class="rail-actions">
+          <button id="settings-button" title="Settings">⚙</button>
+          <button id="close-button" title="Close">✕</button>
+        </div>
+      </div>
       <div id="widget-stack"></div>
     </section>
     </div>

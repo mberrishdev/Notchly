@@ -191,57 +191,69 @@ body[data-hover="true"] .idle-handle {
   box-sizing: border-box;
 }
 
-header {
+/* The rail replaces a titled header band. It names nothing — you already know which
+   app you opened — and its two actions stay out of the way until the pointer arrives. */
+#panel-rail {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 0 9px;
-  border-bottom: 1px solid var(--hairline);
+  justify-content: center;
+  height: 18px;
+  flex: 0 0 auto;
 }
-header .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-header .title {
-  font-size: 12px;
-  font-weight: 600;
-}
-header .spacer {
-  flex: 1;
-}
-header button {
+#drag-grip {
   appearance: none;
   border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-secondary);
-  width: 22px;
-  height: 22px;
+  padding: 0;
+  width: 34px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: grab;
+  transition: background 0.14s ease;
+}
+body[data-hover="true"] #drag-grip {
+  background: rgba(255, 255, 255, 0.32);
+}
+#drag-grip:active {
+  cursor: grabbing;
+}
+.rail-actions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+body[data-hover="true"] .rail-actions {
+  opacity: 1;
+}
+.rail-actions button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 10.5px;
   cursor: default;
   display: grid;
   place-items: center;
   transition: background 0.12s ease, color 0.12s ease;
 }
-header button:hover {
-  background: rgba(255, 255, 255, 0.12);
+.rail-actions button:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text);
-}
-#drag-grip {
-  background: transparent;
-  cursor: grab;
-}
-#drag-grip:active {
-  cursor: grabbing;
 }
 
 #widget-stack {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px 0 10px;
+  padding: 8px 0 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -255,6 +267,7 @@ header button:hover {
   /* Flex items shrink by default once the stack overflows, which silently clipped
      the bottom of every card. */
   flex: 0 0 auto;
+  position: relative;
   background: rgba(255, 255, 255, 0.055);
   border: 0.5px solid var(--hairline);
   border-radius: 14px;
@@ -265,19 +278,6 @@ header button:hover {
   background: rgba(255, 255, 255, 0.085);
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 12px 8px;
-  border: 0;
-}
-.card-title {
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
-  color: var(--text-tertiary);
-}
 .card-spacer {
   flex: 1;
 }
@@ -286,14 +286,43 @@ header button:hover {
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
+
+/* A widget's own controls float over its top-right corner rather than owning a row.
+   Only the hovered card shows them, so a stack of widgets stays quiet. */
+.card-float {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  pointer-events: none;
+}
+.card:hover .card-float {
+  opacity: 1;
+  pointer-events: auto;
+}
+.card-float .name {
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .card-action {
   appearance: none;
   border: 0;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.35);
   color: var(--text-tertiary);
   font-size: 11px;
+  line-height: 1;
   cursor: default;
-  padding: 0 2px;
+  padding: 3px 5px;
+  border-radius: 6px;
 }
 .card-action:hover {
   color: var(--text);
@@ -303,7 +332,8 @@ header button:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 12px 12px;
+  /* Even top and bottom now that no header sits above it. */
+  padding: 12px;
 }
 
 .row {

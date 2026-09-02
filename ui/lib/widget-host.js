@@ -27,13 +27,15 @@ export function createWidgetCard(pkg, { onReload }) {
   card.className = "card";
   card.dataset.widgetId = pkg.manifest.id;
 
-  const header = document.createElement("header");
-  header.className = "card-header";
-  header.innerHTML = `
-    <span class="card-title">${escapeHtml(pkg.manifest.name)}</span>
-    <span class="card-spacer"></span>
+  // A custom widget draws its own content, so the shell adds no header around it. The
+  // name still matters when a widget renders nothing and you need to know which one —
+  // so it rides with the reload button, over the card, and only while it is hovered.
+  const float = document.createElement("div");
+  float.className = "card-float";
+  float.innerHTML = `
+    <span class="name">${escapeHtml(pkg.manifest.name)}</span>
     <button class="card-action" title="Reload">⟳</button>`;
-  header.querySelector("button").addEventListener("click", () => onReload(pkg.manifest.id));
+  float.querySelector("button").addEventListener("click", () => onReload(pkg.manifest.id));
 
   const frame = document.createElement("iframe");
   // No allow-same-origin: the widget gets an opaque origin and no reach into the host.
@@ -42,7 +44,7 @@ export function createWidgetCard(pkg, { onReload }) {
   frame.src = widgetUrl(pkg);
   frame.style.height = `${resolveHeight(pkg.manifest, null)}px`;
 
-  card.append(header, frame);
+  card.append(frame, float);
   frames.set(frame, pkg.manifest.id);
   return card;
 }

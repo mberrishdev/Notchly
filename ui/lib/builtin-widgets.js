@@ -47,13 +47,27 @@ export function loadTone(fraction) {
   return "danger";
 }
 
-function card(title, body, accessory) {
+/**
+ * A card is its content and nothing else.
+ *
+ * There was a header row here carrying the widget's name in small caps. It was removed
+ * because a large clock, album art, or a search field says what it is far better than
+ * the word above it does — and the row cost every widget 26px before its first reading.
+ * The two widgets that genuinely are not self-evident label themselves, in their own
+ * body, where the label can sit beside the thing it names.
+ */
+function card(body) {
   const node = el("section", "card");
-  const header = el("header", "card-header");
-  header.append(el("span", "card-title", title), el("span", "card-spacer"));
-  if (accessory) header.append(accessory);
-  node.append(header, body);
+  node.append(body);
   return node;
+}
+
+/** A widget's own quiet label, for the ones a glance cannot place. */
+function selfLabel(text, accessory) {
+  const row = el("div", "row baseline");
+  row.append(el("span", "section-label", text), el("span", "card-spacer"));
+  if (accessory) row.append(accessory);
+  return row;
 }
 
 export function clockWidget(prefs) {
@@ -85,7 +99,7 @@ export function clockWidget(prefs) {
        <span class="muted">Week ${weekOfYear(now)}</span>`,
     ),
   );
-  return card("CLOCK", body);
+  return card(body);
 }
 
 function weekOfYear(date) {
@@ -146,8 +160,9 @@ export function systemWidget(metrics, history, prefs) {
     }
   }
 
-  const uptime = el("span", "accessory", `${formatDuration(metrics.uptime)} up`);
-  return card("SYSTEM", body, uptime);
+  // Uptime rode in the header; it belongs with the readings it describes.
+  body.append(selfLabel("UPTIME", el("span", "accessory", formatDuration(metrics.uptime))));
+  return card(body);
 }
 
 function meterRow(label, fraction, detail) {
@@ -196,7 +211,7 @@ export function mediaWidget(media) {
   const body = el("div", "card-body");
   if (!media || !media.title) {
     body.append(el("div", "empty", "Nothing playing<br><span class='muted'>Start something in Music or Spotify.</span>"));
-    return card("NOW PLAYING", body);
+    return card(body);
   }
 
   body.append(
@@ -228,15 +243,16 @@ export function mediaWidget(media) {
     controls.append(button);
   }
   body.append(controls);
-  return card("NOW PLAYING", body);
+  return card(body);
 }
 
 export function clipboardWidget(entries, prefs) {
   const body = el("div", "card-body");
   const limit = prefs.visibleCount ?? 6;
+  body.append(selfLabel("CLIPBOARD", el("span", "accessory", String(entries?.length ?? 0))));
   if (!entries?.length) {
     body.append(el("div", "empty", "Nothing copied yet<br><span class='muted'>Copy something and it lands here.</span>"));
-    return card("CLIPBOARD", body);
+    return card(body);
   }
   for (const entry of entries.slice(0, limit)) {
     const row = el("button", "clip-row");
@@ -247,7 +263,7 @@ export function clipboardWidget(entries, prefs) {
     );
     body.append(row);
   }
-  return card("CLIPBOARD", body, el("span", "accessory", String(entries.length)));
+  return card(body);
 }
 
 function escapeHtml(text) {
@@ -264,7 +280,7 @@ export function launcherWidget() {
   const results = el("div", "launcher-results");
   results.id = "launcher-results";
   body.append(field, results);
-  return card("LAUNCHER", body);
+  return card(body);
 }
 
 export function renderLauncherResults(container, apps, selected) {
