@@ -104,6 +104,20 @@
         return Array.isArray(pulls) ? pulls.length : 0;
       }
 
+      /**
+       * Accepts "owner/name", or a github.com URL pasted from the address bar, and
+       * rejects anything else. A bare "Notchly" would otherwise be sent as a URL path
+       * and come back as a 403 about token access, which is true of the request and
+       * useless to the person who typed it.
+       */
+      function repoPath(text) {
+        const cleaned = text
+          .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+          .replace(/\.git$/i, '')
+          .replace(/\/+$/, '');
+        return /^[\w.-]+\/[\w.-]+$/.test(cleaned) ? cleaned : null;
+      }
+
       function fail(message) {
         el('status').textContent = message;
         el('status').className = 'status error';
@@ -145,13 +159,24 @@
       async function load() {
         const settings = await notchly.settings.all();
         const token = (settings.token ?? '').trim();
-        const repos = (settings.repos ?? '')
+        const entries = (settings.repos ?? '')
           .split(',')
           .map((one) => one.trim())
           .filter(Boolean)
           .slice(0, 3);
 
+        const repos = [];
+        const unusable = [];
+        for (const entry of entries) {
+          const path = repoPath(entry);
+          if (path) repos.push(path);
+          else unusable.push(entry);
+        }
+
         if (!token) return say('Add a GitHub token in Settings.');
+        if (unusable.length) {
+          return say(`Repositories look like owner/name. Check “${unusable[0]}” in Settings.`);
+        }
         if (!repos.length) return say('Add a repository — owner/name — in Settings.');
 
         try {
