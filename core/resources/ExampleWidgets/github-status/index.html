@@ -30,6 +30,9 @@
     }
     .inbox b { color: var(--notchly-text); font-weight: 600; }
     .inbox:hover { color: var(--notchly-accent); }
+    /* A line explaining why the inbox is missing is not something to click. */
+    .inbox.muted { color: var(--notchly-text-tertiary); cursor: default; }
+    .inbox.muted:hover { color: var(--notchly-text-tertiary); }
     .status { font-size: 11px; color: var(--notchly-text-secondary); padding: 14px 0; text-align: center; }
     .status.error { color: #FF8A9B; text-align: left; }
   </style>
@@ -58,20 +61,30 @@
 
       /**
        * One authenticated GET. GitHub says a great deal through the status code, so
-       * translate the ones a user can actually act on rather than surfacing a number.
+       * translate the ones a user can act on rather than surfacing a number — and name
+       * the thing that failed, since a cycle makes seven calls and "Forbidden" alone
+       * gives you no way to tell which one.
        */
-      async function api(path, token) {
+      async function api(path, token, subject) {
         const response = await notchly.http.get(`${API}${path}`, headers(token));
-        if (response.status === 401) throw new Error('Token rejected. Check it in Settings.');
-        if (response.status === 403) throw new Error('Forbidden — the token may lack a scope, or you are rate limited.');
-        if (response.status === 404) throw new Error('Not found. Check the repository name, or the token’s access.');
-        if (response.status >= 400) throw new Error(`GitHub returned ${response.status}.`);
+        if (response.status >= 400) {
+          const error = new Error(explain(response.status, subject));
+          error.status = response.status;
+          throw error;
+        }
         return JSON.parse(response.body);
+      }
+
+      function explain(status, subject) {
+        if (status === 401) return 'Token rejected. Check it in Settings.';
+        if (status === 403) return `${subject}: forbidden. The token may lack access, or you are rate limited.`;
+        if (status === 404) return `${subject}: not found. Check the name, or the token’s access.`;
+        return `${subject}: GitHub returned ${status}.`;
       }
 
       /** The latest workflow run on the default branch, reduced to one word. */
       async function ciState(repo, token) {
-        const data = await api(`/repos/${repo}/actions/runs?per_page=1`, token);
+        const data = await api(`/repos/${repo}/actions/runs?per_page=1`, token, repo);
         const run = data.workflow_runs && data.workflow_runs[0];
         if (!run) return { label: 'no runs', dot: '' };
         if (run.status !== 'completed') return { label: run.status.replace('_', ' '), dot: 'running' };
@@ -87,7 +100,7 @@
        * the bridge does not hand back — 100 is far past where a count stays useful.
        */
       async function openPulls(repo, token) {
-        const pulls = await api(`/repos/${repo}/pulls?state=open&per_page=100`, token);
+        const pulls = await api(`/repos/${repo}/pulls?state=open&per_page=100`, token, repo);
         return Array.isArray(pulls) ? pulls.length : 0;
       }
 
@@ -150,25 +163,39 @@
             rows.push(repoRow(repo, ci, pulls));
           }
           el('repos').replaceChildren(...rows);
-
-          const inbox = el('inbox');
-          if (settings.notifications === false) {
-            inbox.hidden = true;
-          } else {
-            const unread = await api('/notifications?all=false', token);
-            const count = Array.isArray(unread) ? unread.length : 0;
-            inbox.replaceChildren();
-            const strong = document.createElement('b');
-            strong.textContent = String(count);
-            inbox.append(strong, document.createTextNode(` unread notification${count === 1 ? '' : 's'}`));
-            inbox.onclick = () => notchly.open('https://github.com/notifications');
-            inbox.hidden = false;
-          }
-
           el('status').hidden = true;
           el('content').hidden = false;
         } catch (error) {
-          fail(String(error.message || error));
+          return fail(String(error.message || error));
+        }
+
+        // Notifications get their own attempt. `GET /notifications` is closed to
+        // fine-grained tokens, which is what the settings help asks for — so the
+        // common case is that this one call fails while every other one worked.
+        // Losing the inbox line must not take the repository rows with it.
+        const inbox = el('inbox');
+        if (settings.notifications === false) {
+          inbox.hidden = true;
+          return;
+        }
+        try {
+          const unread = await api('/notifications?all=false', token, 'Notifications');
+          const count = Array.isArray(unread) ? unread.length : 0;
+          inbox.replaceChildren();
+          const strong = document.createElement('b');
+          strong.textContent = String(count);
+          inbox.append(strong, document.createTextNode(` unread notification${count === 1 ? '' : 's'}`));
+          inbox.onclick = () => notchly.open('https://github.com/notifications');
+          inbox.className = 'inbox';
+          inbox.hidden = false;
+        } catch (error) {
+          inbox.replaceChildren();
+          inbox.textContent = error.status === 403
+            ? 'Notifications need a classic token with the notifications scope.'
+            : error.message;
+          inbox.onclick = null;
+          inbox.className = 'inbox muted';
+          inbox.hidden = false;
         }
       }
 

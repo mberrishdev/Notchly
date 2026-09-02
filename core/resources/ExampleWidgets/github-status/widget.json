@@ -13,7 +13,7 @@
   "permissions": ["network"],
   "settings": [
     { "key": "token", "type": "secret", "label": "GitHub token",
-      "help": "A fine-grained token with read access to the repos below. Never leaves the OS credential store." },
+      "help": "A fine-grained token with read access to the repos below covers CI and pull requests. Unread notifications need a classic token with the notifications scope. Never leaves the OS credential store." },
     { "key": "repos", "type": "string", "label": "Repositories", "default": "",
       "help": "owner/name, comma separated. The first three are shown." },
     { "key": "notifications", "type": "boolean", "label": "Unread notifications", "default": true }
