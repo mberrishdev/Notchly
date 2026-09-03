@@ -110,8 +110,16 @@ export function trackManifest(card, manifest) {
   if (frame) frame.__manifest = manifest;
 }
 
-export function forgetFrames(container) {
+/**
+ * Drops the bookkeeping for iframes that are no longer on the page.
+ *
+ * Scoped to the document rather than to one container: a widget's iframe can be in the
+ * stack or in a popover card, and a sweep that only knew about one of those would forget
+ * a live frame in the other — and a forgotten frame's bridge calls stop being
+ * attributable, so they are refused.
+ */
+export function forgetFrames() {
   for (const frame of Array.from(frames.keys())) {
-    if (!container.contains(frame)) frames.delete(frame);
+    if (!frame.isConnected) frames.delete(frame);
   }
 }

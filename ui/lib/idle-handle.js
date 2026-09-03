@@ -6,7 +6,7 @@
 // rotated, because rotated text is unreadable at this size.
 
 import { growsHorizontally } from "./notch-shape.js";
-import { icons } from "./icons.js";
+import { icons, widgetGlyph } from "./icons.js";
 
 const pad = (value) => String(value).padStart(2, "0");
 
@@ -73,13 +73,13 @@ function readingChip(icon, value, tone, stacked) {
   </div>`;
 }
 
-function loadTone(fraction) {
+export function loadTone(fraction) {
   if (fraction < 0.6) return "normal";
   if (fraction < 0.85) return "caution";
   return "danger";
 }
 
-const percent = (fraction) => `${Math.round((fraction ?? 0) * 100)}%`;
+export const percent = (fraction) => `${Math.round((fraction ?? 0) * 100)}%`;
 
 function nowPlayingChip(media) {
   const playing = Boolean(media?.playing);
@@ -88,18 +88,8 @@ function nowPlayingChip(media) {
   </div>`;
 }
 
-const WIDGET_GLYPHS = {
-  clock: icons.clock,
-  media: icons.charging,
-  system: icons.cpu,
-  launcher: icons.widget,
-  clipboard: icons.clipboard,
-};
-
 function widgetIconsChip(widgetIds, stacked) {
-  const glyphs = (widgetIds.length ? widgetIds : [null]).map(
-    (id) => WIDGET_GLYPHS[id] ?? icons.widget,
-  );
+  const glyphs = (widgetIds.length ? widgetIds : [null]).map(widgetGlyph);
   return `<div class="chip chip-icons ${stacked ? "stacked" : ""}">
     ${glyphs.map((glyph) => `<span class="glyph">${glyph}</span>`).join("")}
   </div>`;
@@ -144,42 +134,4 @@ function batteryChip(battery, stacked, ring) {
   const level = battery.level ?? 0;
   const tone = battery.charging ? "good" : level < 0.15 ? "danger" : level < 0.3 ? "caution" : "normal";
   return arcChip(battery.charging ? icons.charging : icons.battery, level, tone, stacked, ring);
-}
-
-/** One labelled bar in a popover. */
-function meter(label, fraction, tone) {
-  const value = Math.min(1, Math.max(0, fraction ?? 0));
-  return `<div class="pop-row">
-    <div class="pop-line"><span class="pop-label">${label}</span><span class="pop-value">${percent(value)}</span></div>
-    <div class="pop-track"><span class="pop-fill tone-${tone}" style="width:${(value * 100).toFixed(1)}%"></span></div>
-  </div>`;
-}
-
-/**
- * The detail behind one reading, shown while the pointer rests on it.
- *
- * Only the readings that draw an arc get one — they are the ones with more to say than
- * the number already on screen. Anything else opens the panel instead, as it always has.
- */
-export function popoverContent(chip, data) {
-  const metrics = data.metrics ?? {};
-  if (chip === "battery") {
-    const battery = metrics.battery ?? {};
-    const level = battery.level ?? 0;
-    const tone = battery.charging ? "good" : level < 0.15 ? "danger" : level < 0.3 ? "caution" : "normal";
-    const state = battery.charging ? "Charging" : "On battery";
-    const detail = battery.minutesRemaining
-      ? `${Math.round(battery.minutesRemaining / 60)}h ${battery.minutesRemaining % 60}m ${battery.charging ? "to full" : "left"}`
-      : state;
-    return `<div class="pop-head"><span class="glyph">${battery.charging ? icons.charging : icons.battery}</span>Battery</div>
-      ${meter("Charge", level, tone)}
-      <div class="pop-foot"><span>${state}</span><span class="pop-strong">${detail}</span></div>`;
-  }
-
-  const heaviest = metrics.topProcesses?.[0];
-  return `<div class="pop-head"><span class="glyph">${icons.cpu}</span>System</div>
-    ${meter("CPU", metrics.cpu, loadTone(metrics.cpu ?? 0))}
-    ${meter("Memory", metrics.memory, loadTone(metrics.memory ?? 0))}
-    ${meter("Disk", metrics.disk, "muted")}
-    ${heaviest ? `<div class="pop-foot"><span>Heaviest right now</span><span class="pop-strong">${heaviest.name}</span></div>` : ""}`;
 }

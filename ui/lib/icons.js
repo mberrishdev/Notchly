@@ -51,4 +51,42 @@ export const icons = {
     <circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/>
     <path d="M8 4.8V8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`),
 
+  search: svg(`
+    <circle cx="7.2" cy="7.2" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <path d="M10.6 10.6 13.6 13.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`),
+
+  // Sliders rather than a cog: at 15px a cog's teeth close up into a disc, and the
+  // radial version of this read as a brightness sun.
+  settings: svg(`
+    <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+      <path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h11.2"/>
+    </g>
+    <g fill="var(--shell, #0b0c0f)" stroke="currentColor" stroke-width="1.4">
+      <circle cx="10.4" cy="4.4" r="1.7"/>
+      <circle cx="5.6" cy="8" r="1.7"/>
+      <circle cx="9.6" cy="11.6" r="1.7"/>
+    </g>`),
+
+  note: svg(`
+    <path d="M6.2 11.4V3.6l6.2-1.5v7.6" fill="none" stroke="currentColor" stroke-width="1.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="4.4" cy="11.6" r="1.9" fill="currentColor"/>
+    <circle cx="10.6" cy="9.9" r="1.9" fill="currentColor"/>`),
+
 };
+
+/**
+ * The glyph that stands for a widget wherever one is shown by icon alone — the idle
+ * handle's widget-icons chip, and the compact Icon Strip. One map, so a widget cannot
+ * be one picture in the handle and another on the strip.
+ */
+const WIDGET_GLYPHS = {
+  clock: icons.clock,
+  media: icons.note,
+  system: icons.cpu,
+  launcher: icons.search,
+  clipboard: icons.clipboard,
+};
+
+/** Custom widgets have no symbol of their own, so they all get the generic mark. */
+export const widgetGlyph = (widgetId) => WIDGET_GLYPHS[widgetId] ?? icons.widget;

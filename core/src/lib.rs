@@ -220,6 +220,13 @@ fn build_settings_window(app: &AppHandle) -> Result<(), String> {
 
 /// `async` so Tauri runs it on the async runtime rather than the main thread — see
 /// `build_settings_window`.
+/// Clicking an icon on the compact strip, rather than resting on it. Same popover, no
+/// wait — the click already said which widget was meant.
+#[tauri::command]
+fn show_widget_popover(app: AppHandle, widget_id: Option<String>) {
+    panel::set_popover(&app, widget_id.map(panel::Popover::Widget));
+}
+
 #[tauri::command]
 async fn open_settings(app: AppHandle) -> Result<(), String> {
     build_settings_window(&app)
@@ -380,6 +387,7 @@ pub fn run() {
             builtin_widgets,
             list_displays,
             open_settings,
+            show_widget_popover,
             create_starter_widget,
             reinstall_examples,
             reload_all_widgets,

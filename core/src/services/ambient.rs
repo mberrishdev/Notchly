@@ -6,7 +6,8 @@
 //! nothing.
 
 use super::metrics::{Cadence, MetricsSample, SamplerHandle};
-use crate::settings::Settings;
+use crate::panel::Popover;
+use crate::settings::{PanelStyle, Settings};
 use tauri::{AppHandle, Emitter};
 
 #[derive(Default)]
@@ -51,9 +52,22 @@ impl Drop for MediaPoller {
 
 impl Ambient {
     /// Starts, stops, or re-paces sampling to match what is currently on screen.
-    pub fn sync(&mut self, app: &AppHandle, expanded: bool, settings: &Settings) {
-        let wanted = if expanded {
-            // The open panel shows the System widget, which wants the process list.
+    ///
+    /// The compact strip is why `popover` is here: opening it puts nothing but glyphs on
+    /// screen, so it must not request Live sampling the way the Widget Stack does. Only
+    /// the card the pointer actually opened counts as a reading being displayed.
+    pub fn sync(
+        &mut self,
+        app: &AppHandle,
+        expanded: bool,
+        settings: &Settings,
+        popover: Option<&Popover>,
+    ) {
+        let showing = |widget_id: &str| popover.and_then(Popover::widget_id) == Some(widget_id);
+        let stack_open = expanded && settings.panel_style != PanelStyle::Compact;
+
+        let wanted = if stack_open || showing("system") {
+            // Both show the System widget, which wants the process list.
             Some((Cadence::Live, true))
         } else if settings.handle_chips.iter().any(|chip| chip.needs_metrics()) {
             Some((Cadence::Ambient, false))
@@ -61,8 +75,8 @@ impl Ambient {
             None
         };
 
-        // Now Playing is wanted by the open panel and by the idle indicator chip.
-        let media_wanted = if expanded {
+        // Now Playing is wanted by the open panel, its card, and the idle indicator chip.
+        let media_wanted = if stack_open || showing("media") {
             Some(Cadence::Live)
         } else if settings.handle_chips.iter().any(|chip| chip.needs_media()) {
             Some(Cadence::Ambient)

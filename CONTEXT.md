@@ -12,17 +12,65 @@ It has exactly two visual states:
 
 - **Idle** — the **Handle** hugging the screen edge. Either a bare line, or a strip
   showing **Idle Chips** (see below).
-- **Open** — the full surface, showing the **Widget Stack**.
+- **Open** — the surface the Handle opens into, in whichever **Panel Style** is set.
 
 There is no third state. Anything that looks like a third state (a hover highlight, a
-drag lift) is a decoration on one of these two.
+drag lift, a **Popover**) is a decoration on one of these two.
 
 The Panel's outline is the **Notch Shape**: rounded on the two corners away from the
 screen edge, and *concave* on the two corners that meet it, flaring outward so the
 surface reads as continuous with the bezel. The concave corners are the whole point of
 the app's identity — never replace the shape with a plain rounded rectangle.
 
-- Avoid: "popover", "HUD", "drawer", "sidebar", "window" (for the Panel itself).
+- Avoid: "popover", "HUD", "drawer", "sidebar", "window" (for the Panel itself). The
+  Popover below is a real thing with that name; the Panel is never called one.
+
+**`shows_handle_when_idle` is what makes Notchly disappear.** Turned off, the Handle is
+the bare line whatever Idle Chips are selected — the selection is kept, not cleared, so
+turning it back on restores the strip that was there. The Panel window is snug around
+the line, so what is left on screen is a few points of bezel that swallows nothing.
+
+## Panel Style
+
+Which surface the Panel opens into. Two, and the Panel is Open in both:
+
+- **Full** — the **Widget Stack**: every enabled Slot's card, one under another, in a
+  Panel sized by the width and height settings.
+- **Compact** — the **Icon Strip**: one **Widget Icon** per enabled Slot, plus a
+  settings action, on a surface barely larger than the Handle. Resting on an icon draws
+  that widget's **Popover** beside the strip.
+
+Rules:
+
+1. **The Icon Strip is a row of targets, not a canvas.** Its size comes from
+   `StripLayout` and the number of icons, never from the panel width and height
+   settings — a wider strip would only spread the icons further apart.
+2. **The settings action leads the strip**, so its position never moves as widgets are
+   added and removed.
+3. **A widget shows the same view in both Styles.** A Built-in Widget's Popover calls
+   the same function the Stack calls; a Custom Widget's is the same sandboxed iframe
+   under the same origin. A widget that rendered differently in the two would be two
+   widgets.
+4. **Compact reserves the Popover's room in the window frame.** The strip's window is
+   sized for the strip *plus* a Popover beside it, whether or not one is showing, so a
+   Popover never appears outside the window and gets clipped.
+
+## The Popover
+
+The card drawn beside the Panel while the pointer rests on something: an Idle Chip that
+draws an arc, or a Widget Icon on the Icon Strip. One gesture, one state — only one
+Popover shows at a time, and Rust owns which, because the Panel never activates and so
+cannot be asked from the DOM.
+
+1. **A Popover is drawn clear of the hover buffer, not merely clear of the shape.** The
+   buffer counts as part of the Handle, so a Popover inside it had a near edge that read
+   as "still on the Handle" — which put it away in the same motion that reached for it.
+   `popover_offset` is that distance, and the frontend is handed it rather than choosing
+   one.
+2. **Reaching onto a Popover is not the push that opens the Panel.** The room it
+   occupies is its own zone; only past it is the movement unambiguous.
+3. **Opening the Widget Stack supersedes a Popover**, which would otherwise be drawn
+   behind it. The Icon Strip is the exception, being the size of a Handle.
 
 ## Idle Chips
 
@@ -78,8 +126,9 @@ These are load-bearing, not preferences:
 
 ## Widgets
 
-A **Widget** is one card in the Widget Stack. Two kinds, and the distinction is only
-about where the code lives:
+A **Widget** is one entry in the user's Panel — a card in the Widget Stack, or an icon
+and its Popover on the Icon Strip. Two kinds, and the distinction is only about where
+the code lives:
 
 - **Built-in Widget** — compiled in. Clock, Now Playing, System, Quick Launcher,
   Clipboard.
@@ -125,8 +174,12 @@ path to the settings UI.
 Everything that samples — system metrics, now playing — is **refcounted**, at one of two
 **Cadences**:
 
-- **Live** — the Panel is Open and the numbers are on screen. Fast.
+- **Live** — the numbers are on screen. Fast.
 - **Ambient** — the Panel is closed but an Idle Chip needs the value. Slow.
+
+An open Widget Stack is Live because it shows every widget at once. **An open Icon Strip
+is not**: it puts nothing on screen but glyphs, so only the Popover the pointer actually
+opened counts as a reading being displayed.
 
 The fastest requested Cadence wins; no subscribers stops sampling entirely, which is the
 default state, because the default Handle shows only the clock and the clock samples

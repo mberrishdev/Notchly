@@ -26,6 +26,19 @@ impl ScreenEdge {
     }
 }
 
+/// What the panel shows once it is Open.
+///
+/// `Compact` is for someone who wants Notchly out of the way: the Widget Stack is
+/// replaced by the Icon Strip, and a widget's content is read one card at a time by
+/// resting on its icon. It is a different Open state, not a third state — the Panel is
+/// still either Idle or Open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PanelStyle {
+    Full,
+    Compact,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ActivationMode {
@@ -159,6 +172,7 @@ defaulted!(d_handle_thickness, f64, 5.0);
 defaulted!(d_handle_length, f64, 108.0);
 defaulted!(d_handle_content_thickness, f64, 44.0);
 defaulted!(d_corner_radius, f64, 26.0);
+defaulted!(d_panel_style, PanelStyle, PanelStyle::Full);
 defaulted!(d_activation, ActivationMode, ActivationMode::Hover);
 defaulted!(d_open_delay, f64, 0.14);
 defaulted!(d_close_delay, f64, 0.42);
@@ -207,6 +221,7 @@ pub struct Settings {
     pub handle_content_thickness: f64,
     pub corner_radius: f64,
     pub edge_inset: f64,
+    pub panel_style: PanelStyle,
 
     pub activation: ActivationMode,
     pub open_delay: f64,
@@ -243,6 +258,7 @@ impl Default for Settings {
             handle_content_thickness: d_handle_content_thickness(),
             corner_radius: d_corner_radius(),
             edge_inset: 0.0,
+            panel_style: d_panel_style(),
             activation: d_activation(),
             open_delay: d_open_delay(),
             close_delay: d_close_delay(),

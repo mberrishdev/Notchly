@@ -24,6 +24,7 @@ function fallbackSettings() {
     hotkey: { accelerator: "", isEnabled: false },
     opacity: 0.96,
     accentHex: "#6E9BFF",
+    panelStyle: "full",
     panelWidth: 372,
     panelHeight: 540,
     cornerRadius: 26,
@@ -204,6 +205,23 @@ function appearancePane() {
     ], "A shaped window can't sit on a real blur without it showing as a rectangle behind the concave corners, so the panel is a flat fill that Opacity thins rather than vibrancy."),
   );
 
+  const compact = settings.panelStyle === "compact";
+  nodes.push(
+    group("When open", [
+      field(
+        "Style",
+        compact
+          ? "A row of icons against the edge. Rest on one to read that widget."
+          : "The full widget stack, one card under another.",
+        segmented(
+          [["full", "Widget stack"], ["compact", "Icons"]],
+          settings.panelStyle,
+          (style) => commit((s) => (s.panelStyle = style)),
+        ),
+      ),
+    ], "The icon strip is for keeping Notchly out of the way: it opens to a strip barely larger than the handle, and a widget's popover appears beside it only while you point at it."),
+  );
+
   nodes.push(
     group("Shape", [
       field("Panel width", null, slider(settings.panelWidth, 240, 560, 1, "pt", (v) =>
@@ -212,14 +230,14 @@ function appearancePane() {
         commit((s) => (s.panelHeight = v)))),
       field("Corner radius", null, slider(settings.cornerRadius, 0, 44, 1, "pt", (v) =>
         commit((s) => (s.cornerRadius = v)))),
-    ], "Width and height describe how far the panel reaches from its edge and how long it runs along it."),
+    ], compact
+      ? "Width and height size the widget stack, which the icon strip does not use — the strip is sized to its icons."
+      : "Width and height describe how far the panel reaches from its edge and how long it runs along it."),
   );
 
   nodes.push(idleHandleGroup());
   nodes.push(
     group("Motion", [
-      field("Show the handle when idle", null, toggle(settings.showsHandleWhenIdle, (v) =>
-        commit((s) => (s.showsHandleWhenIdle = v)))),
       field("Reduce motion", null, toggle(settings.reduceMotion, (v) => commit((s) => (s.reduceMotion = v)))),
     ]),
   );
@@ -313,6 +331,17 @@ const SAMPLING_CHIPS = new Set(["cpu", "memory", "battery", "nowPlaying"]);
 function idleHandleGroup() {
   const chosen = settings.handleChips ?? [];
   const children = [];
+
+  // First, because it decides whether anything below it is on screen at all.
+  children.push(
+    field(
+      "Show the handle",
+      settings.showsHandleWhenIdle
+        ? null
+        : "Off. A bare line sits at the edge; hover it to open the panel.",
+      toggle(settings.showsHandleWhenIdle, (v) => commit((s) => (s.showsHandleWhenIdle = v))),
+    ),
+  );
 
   const presets = [
     ["Line", []],

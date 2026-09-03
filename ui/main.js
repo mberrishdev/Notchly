@@ -1,6 +1,8 @@
 import { panel, listen, invoke } from "./lib/bridge.js";
 import { renderShape } from "./lib/panel-view.js";
-import { renderIdleHandle, popoverContent } from "./lib/idle-handle.js";
+import { renderIdleHandle } from "./lib/idle-handle.js";
+import { renderIconStrip } from "./lib/icon-strip.js";
+import { chipContent, widgetContent, contentRefreshes } from "./lib/popover.js";
 import * as builtin from "./lib/builtin-widgets.js";
 import { createWidgetCard, startBridgeRelay, trackManifest, forgetFrames } from "./lib/widget-host.js";
 
@@ -9,11 +11,16 @@ let current = null;
 /** Live values for the idle chips, refreshed only while something needs them. */
 let ambient = { metrics: {}, media: null, clipboardCount: 0, widgetIcons: [] };
 let catalog = { packages: [], failures: [] };
+let descriptors = [];
 let clipboard = [];
 let cpuHistory = new Array(48).fill(0);
 /// Web widget iframes are expensive to recreate, so the stack is only rebuilt when the
 /// set of widgets actually changes — not on every metrics tick.
 let stackSignature = "";
+/// The popover's contents are rebuilt only when they change to a different thing, for
+/// the same reason: a custom widget's iframe and the launcher's typed query do not
+/// survive being recreated.
+let popoverSignature = "";
 let launcherResults = [];
 let launcherSelection = 0;
 
@@ -29,13 +36,20 @@ function render() {
 
   const swapContent = () => {
     const handle = document.getElementById("idle-handle");
+    const strip = document.getElementById("icon-strip");
     const body = document.getElementById("panel-body");
     if (metrics.expanded) {
       handle.hidden = true;
-      body.hidden = false;
-      renderStack(settings);
+      body.hidden = isCompact();
+      strip.hidden = !isCompact();
+      if (isCompact()) {
+        renderIconStrip(strip, settings, metrics, current.popover?.value, widgetName);
+      } else {
+        renderStack(settings);
+      }
     } else {
       body.hidden = true;
+      strip.hidden = true;
       handle.hidden = !metrics.showsContent;
       if (metrics.showsContent) renderIdleHandle(handle, settings, ambient, metrics.handleRing);
     }
@@ -48,54 +62,99 @@ function render() {
   renderShape(metrics, settings, swapContent);
 }
 
+const isCompact = () => current?.settings.panelStyle === "compact";
+
 /**
- * Places the popover beside the handle, in the room the enlarged window buys.
+ * Places the popover beside the shape, in the room the enlarged window buys.
  *
- * Rust decides whether one is showing and for which reading; this only draws it. The
- * position comes from the same metrics the shape is drawn from, so the card tracks the
- * handle rather than guessing where it ended up.
+ * Rust decides whether one is showing and for what; this only draws it. The position
+ * comes from the same metrics the shape is drawn from, so the card tracks the shape
+ * rather than guessing where it ended up — and the gap comes from Rust too, because it
+ * is the same number the hover zones are measured against.
  */
 function renderPopover() {
   const node = document.getElementById("popover");
   if (!node) return;
-  const chip = current?.popover;
+  const target = current?.popover;
   const metrics = current?.metrics;
-  if (!chip || !metrics || metrics.expanded) {
+  // The open Widget Stack fills its window; only the compact strip leaves room beside it.
+  if (!target || !metrics || (metrics.expanded && !isCompact())) {
     node.hidden = true;
+    node.replaceChildren();
+    popoverSignature = "";
+    forgetFrames();
     return;
   }
 
-  node.innerHTML = popoverContent(chip, ambient);
+  fillPopover(node, target);
   node.dataset.edge = current.settings.edge;
-  // Rust sizes the card, because the hover zones are measured against the same number.
+  // Rust sizes the card, because the hover zones are measured against the same numbers.
   if (metrics.popoverWidth) node.style.width = `${metrics.popoverWidth}px`;
+  if (metrics.popoverHeight) node.style.maxHeight = `${metrics.popoverHeight}px`;
   node.style.left = node.style.right = node.style.top = node.style.bottom = "";
 
-  const GAP = 10;
+  const gap = metrics.popoverOffset ?? 10;
   const alongCentre = (start, length) => `${start + length / 2}px`;
   switch (current.settings.edge) {
     case "trailing":
-      node.style.right = `${metrics.windowWidth - metrics.offsetX + GAP}px`;
+      node.style.right = `${metrics.windowWidth - metrics.offsetX + gap}px`;
       node.style.top = alongCentre(metrics.offsetY, metrics.shapeHeight);
       node.style.transform = "translateY(-50%)";
       break;
     case "leading":
-      node.style.left = `${metrics.offsetX + metrics.shapeWidth + GAP}px`;
+      node.style.left = `${metrics.offsetX + metrics.shapeWidth + gap}px`;
       node.style.top = alongCentre(metrics.offsetY, metrics.shapeHeight);
       node.style.transform = "translateY(-50%)";
       break;
     case "top":
-      node.style.top = `${metrics.offsetY + metrics.shapeHeight + GAP}px`;
+      node.style.top = `${metrics.offsetY + metrics.shapeHeight + gap}px`;
       node.style.left = alongCentre(metrics.offsetX, metrics.shapeWidth);
       node.style.transform = "translateX(-50%)";
       break;
     default:
-      node.style.bottom = `${metrics.windowHeight - metrics.offsetY + GAP}px`;
+      node.style.bottom = `${metrics.windowHeight - metrics.offsetY + gap}px`;
       node.style.left = alongCentre(metrics.offsetX, metrics.shapeWidth);
       node.style.transform = "translateX(-50%)";
       break;
   }
   node.hidden = false;
+}
+
+/** The name a widget goes by, whichever kind it is. */
+function widgetName(widgetId) {
+  return (
+    descriptors.find((one) => one.id === widgetId)?.name ??
+    catalog.packages.find((pkg) => pkg.manifest.id === widgetId)?.manifest.name ??
+    widgetId
+  );
+}
+
+function fillPopover(node, target) {
+  const revision =
+    catalog.packages.find((pkg) => pkg.manifest.id === target.value)?.revision ?? 0;
+  const signature = `${target.kind}:${target.value}:${revision}`;
+  const changed = signature !== popoverSignature;
+  // A reading is redrawn on every tick; a widget only when it is a different one,
+  // unless it is a built-in whose view is nothing but numbers.
+  if (!changed && target.kind === "widget" && !contentRefreshes(target.value)) return;
+  popoverSignature = signature;
+
+  if (target.kind === "chip") {
+    node.innerHTML = chipContent(target.value, ambient);
+  } else {
+    node.replaceChildren(
+      widgetContent(target.value, {
+        ambient,
+        cpuHistory,
+        clipboard,
+        prefs: slotPrefs(current.settings, target.value),
+        name: widgetName,
+        package: (id) => catalog.packages.find((pkg) => pkg.manifest.id === id),
+        onReload: (id) => invoke("reload_widget", { widgetId: id }),
+      }),
+    );
+  }
+  forgetFrames();
 }
 
 const BUILTIN_IDS = ["clock", "media", "system", "launcher", "clipboard"];
@@ -118,7 +177,7 @@ function renderStack(settings) {
       const node = buildCard(slot, settings);
       if (node) stack.append(node);
     }
-    forgetFrames(stack);
+    forgetFrames();
   } else {
     // Same widgets, new numbers: refresh the built-ins in place.
     for (const slot of slots) {
@@ -227,8 +286,40 @@ function wire() {
     if (event.key === "Escape") panel.close();
   });
 
-  // Transport buttons and clipboard rows are rebuilt constantly, so delegate.
-  document.getElementById("widget-stack").addEventListener("click", (event) => {
+  wireStrip();
+
+  // A widget's view is drawn in the stack or in a popover card, so both get the same
+  // delegated handlers rather than the stack getting a privileged copy.
+  for (const surface of [document.getElementById("widget-stack"), document.getElementById("popover")]) {
+    wireWidgetSurface(surface);
+  }
+
+  document.getElementById("close-button").addEventListener("click", () => panel.close());
+
+  document.getElementById("settings-button").addEventListener("click", () => {
+    invoke("open_settings");
+  });
+}
+
+/** The compact strip: its icons are pressed, not just rested on. */
+function wireStrip() {
+  const strip = document.getElementById("icon-strip");
+  strip.addEventListener("click", (event) => {
+    const icon = event.target.closest(".strip-icon");
+    if (!icon) return;
+    if (icon.dataset.icon === "settings") {
+      invoke("open_settings");
+      return;
+    }
+    // Rust owns which popover is showing, so a click asks for one rather than drawing
+    // it — otherwise the pointer watchdog would put it straight back.
+    const showing = current?.popover?.value === icon.dataset.icon;
+    invoke("show_widget_popover", { widgetId: showing ? null : icon.dataset.icon });
+  });
+}
+
+function wireWidgetSurface(surface) {
+  surface.addEventListener("click", (event) => {
     const transport = event.target.closest(".transport");
     if (transport) {
       invoke("widget_invoke", { widgetId: "media", method: transport.dataset.method, params: {} });
@@ -253,9 +344,7 @@ function wire() {
     }
   });
 
-  const stack = document.getElementById("widget-stack");
-
-  stack.addEventListener("input", async (event) => {
+  surface.addEventListener("input", async (event) => {
     if (event.target.id !== "launcher-input") return;
     const query = event.target.value;
     // Typing must keep the panel open even if the pointer has wandered off.
@@ -270,7 +359,7 @@ function wire() {
     if (results) builtin.renderLauncherResults(results, launcherResults, launcherSelection);
   });
 
-  stack.addEventListener("keydown", (event) => {
+  surface.addEventListener("keydown", (event) => {
     if (event.target.id !== "launcher-input") return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -285,13 +374,6 @@ function wire() {
       if (app) launch(app.path);
     }
   });
-
-  document.getElementById("close-button").addEventListener("click", () => panel.close());
-
-  document.getElementById("settings-button").addEventListener("click", () => {
-    invoke("open_settings");
-  });
-
 }
 
 async function start() {
@@ -321,6 +403,8 @@ async function start() {
 
   current = await panel.state();
   catalog = (await invoke("list_widgets")) ?? { packages: [], failures: [] };
+  // Only for the names on the strip and its cards; the descriptors never change at runtime.
+  descriptors = (await invoke("builtin_widgets")) ?? [];
   startBridgeRelay();
   render();
   wire();
