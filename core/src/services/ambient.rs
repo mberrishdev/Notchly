@@ -7,7 +7,7 @@
 
 use super::metrics::{Cadence, MetricsSample, SamplerHandle};
 use crate::panel::Popover;
-use crate::settings::{PanelStyle, Settings};
+use crate::settings::Settings;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Default)]
@@ -64,21 +64,28 @@ impl Ambient {
         popover: Option<&Popover>,
     ) {
         let showing = |widget_id: &str| popover.and_then(Popover::widget_id) == Some(widget_id);
-        let stack_open = expanded && settings.panel_style != PanelStyle::Compact;
+        let row_for = |widget_id: &str| {
+            expanded
+                && settings
+                    .slots
+                    .iter()
+                    .any(|slot| slot.is_enabled && slot.widget_id == widget_id)
+        };
 
-        let wanted = if stack_open || showing("system") {
-            // Both show the System widget, which wants the process list.
+        let wanted = if showing("system") {
+            // Only the Popover shows the process list; the Row is one percentage.
             Some((Cadence::Live, true))
-        } else if settings.handle_chips.iter().any(|chip| chip.needs_metrics()) {
+        } else if row_for("system") || settings.handle_chips.iter().any(|chip| chip.needs_metrics())
+        {
             Some((Cadence::Ambient, false))
         } else {
             None
         };
 
-        // Now Playing is wanted by the open panel, its card, and the idle indicator chip.
-        let media_wanted = if stack_open || showing("media") {
+        // Now Playing is wanted by its Popover, its Row, and the idle indicator chip.
+        let media_wanted = if showing("media") {
             Some(Cadence::Live)
-        } else if settings.handle_chips.iter().any(|chip| chip.needs_media()) {
+        } else if row_for("media") || settings.handle_chips.iter().any(|chip| chip.needs_media()) {
             Some(Cadence::Ambient)
         } else {
             None

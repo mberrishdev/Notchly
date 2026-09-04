@@ -23,26 +23,12 @@
        beside the handle, where the notch shape's clip path would cut it away. -->
   <div id="popover" hidden></div>
 
+  <!-- The Panel's two states, and nothing else. Both are strips against the bezel: the
+       handle while closed, the strip of readings while open. -->
   <div id="clip-layer">
     <div id="content">
-    <div id="idle-handle" class="idle-handle" hidden></div>
-
-    <!-- The compact open state. A sibling of the panel body rather than a mode of it:
-         it is a strip against the bezel, shaped like the handle, not a small stack. -->
-    <div id="icon-strip" class="icon-strip" hidden></div>
-
-    <section id="panel-body" hidden>
-      <!-- What is left of the panel's own chrome: a grab bar, and two actions that
-           only appear once the pointer is on the panel. -->
-      <div id="panel-rail">
-        <button id="drag-grip" title="Drag to move the panel to another edge"></button>
-        <div class="rail-actions">
-          <button id="settings-button" title="Settings">⚙</button>
-          <button id="close-button" title="Close">✕</button>
-        </div>
-      </div>
-      <div id="widget-stack"></div>
-    </section>
+      <div id="idle-handle" class="idle-handle" hidden></div>
+      <div id="strip" class="strip" hidden></div>
     </div>
   </div>
 

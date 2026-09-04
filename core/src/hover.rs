@@ -7,10 +7,10 @@
 //! can answer "is the pointer over the panel" directly.
 
 use crate::geometry::{
-    chip_at, chip_spans, icon_at, icon_spans, popover_offset, IconSlot, HOVER_BUFFER, POPOVER_WIDTH,
+    chip_at, chip_spans, popover_offset, row_at, row_spans, StripRow, HOVER_BUFFER,
 };
 use crate::panel::{self, Popover};
-use crate::settings::{ActivationMode, PanelStyle, ScreenEdge};
+use crate::settings::{ActivationMode, ScreenEdge};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
@@ -95,7 +95,7 @@ fn zone_of(
     // The popover occupies the room immediately past the strip. Only beyond it is the
     // movement unambiguously "open the panel" rather than "let me read that".
     // `past` is measured from the far side of the buffer, and so is the popover.
-    if showing_popover && past <= popover_offset() - HOVER_BUFFER + POPOVER_WIDTH {
+    if showing_popover && past <= popover_offset() - HOVER_BUFFER + metrics.popover_width {
         Zone::Popover
     } else {
         Zone::Inward
@@ -141,7 +141,6 @@ impl Watchdog {
                     continue;
                 };
                 let hover_mode = settings.activation == ActivationMode::Hover;
-                let compact = settings.panel_style == PanelStyle::Compact;
 
                 let zone = snapshot
                     .as_ref()
@@ -176,21 +175,16 @@ impl Watchdog {
                     inside_since = None;
                     if inside {
                         outside_since = None;
-                        // The Widget Stack fills its window, so there is nothing to
-                        // point at within it. The Icon Strip is a row of targets.
+                        // Resting on a Row opens its Popover.
                         //
                         // Deliberately not gated on the activation mode: that setting
-                        // decides whether the Panel may open by accident, and the strip
+                        // decides whether the Panel may open by accident, and the Strip
                         // is only ever on screen because it was opened on purpose.
-                        if !compact {
-                            resting_since = None;
-                            continue;
-                        }
                         match zone {
                             Zone::OnShape(along) => {
-                                let spans = icon_spans(&settings);
-                                match icon_at(&spans, along) {
-                                    Some(IconSlot::Widget(id)) => {
+                                let spans = row_spans(&settings);
+                                match row_at(&spans, along) {
+                                    Some(StripRow::Widget(id)) => {
                                         let id = id.clone();
                                         let since = *resting_since
                                             .get_or_insert_with(std::time::Instant::now);
@@ -198,9 +192,9 @@ impl Watchdog {
                                             show(Some(Popover::Widget(id)));
                                         }
                                     }
-                                    // The settings icon and the gaps between icons show
-                                    // nothing, so sliding along the strip past them puts
-                                    // the last card away rather than leaving it stranded.
+                                    // The settings Row and the gaps between Rows show
+                                    // nothing, so sliding along the Strip past them puts
+                                    // the last Popover away rather than stranding it.
                                     _ => {
                                         resting_since = None;
                                         show(None);
@@ -296,10 +290,10 @@ impl Drop for Watchdog {
 mod tests {
     use super::{zone_of, Zone};
     use crate::geometry::{
-        chip_at, chip_spans, icon_at, icon_spans, popover_offset, IconSlot, PanelMetrics,
-        ICON_EXTENT, POPOVER_GAP, POPOVER_WIDTH,
+        chip_at, chip_spans, popover_offset, row_at, row_extent, row_spans, strip_depth,
+        PanelMetrics, StripRow, POPOVER_GAP,
     };
-    use crate::settings::{IdleChip, PanelStyle, ScreenEdge, Settings};
+    use crate::settings::{IdleChip, ScreenEdge, Settings};
 
     /// A handle 40 wide and 200 tall, sitting at the right of a 400-wide window whose
     /// top-left corner is the screen origin. Scale 1, so screen and logical agree.
@@ -316,10 +310,11 @@ mod tests {
             window_width: 400.0,
             window_height: 400.0,
             handle_ring: 30.0,
-            popover_width: POPOVER_WIDTH,
+            popover_width: 236.0,
             popover_offset: popover_offset(),
-            popover_height: crate::geometry::POPOVER_HEIGHT,
-            strip_icon_extent: ICON_EXTENT,
+            popover_height: 320.0,
+            strip_row_extent: row_extent(true),
+            strip_depth: strip_depth(true),
         }
     }
 
@@ -349,19 +344,18 @@ mod tests {
         assert_eq!(chip_under(380.0, 118.0), Some(IdleChip::Cpu));
     }
 
-    /// And what it does with the same reading while a compact strip is open.
+    /// And what it does with the same offset while the Strip is open.
     #[test]
-    fn an_open_strip_reports_the_widget_icon_under_the_pointer() {
-        let settings = Settings { panel_style: PanelStyle::Compact, ..settings() };
-        let spans = icon_spans(&settings);
-        // The strip starts at the handle's top edge; the first icon is the settings
+    fn an_open_strip_reports_the_row_under_the_pointer() {
+        let settings = settings();
+        let spans = row_spans(&settings);
+        // The Strip starts at the shape's top edge; the first Row is the settings
         // action, so the second is the first enabled widget.
-        let second = spans[1].start + ICON_EXTENT / 2.0;
+        let second = spans[1].start + row_extent(true) / 2.0;
         match zone_of(380.0, 100.0 + second, 0.0, 0.0, 1.0, &metrics(), settings.edge, false) {
-            Zone::OnShape(along) => assert_eq!(
-                icon_at(&spans, along),
-                Some(&IconSlot::Widget("clock".into())),
-            ),
+            Zone::OnShape(along) => {
+                assert_eq!(row_at(&spans, along), Some(&StripRow::Widget("clock".into())))
+            }
             other => panic!("expected to be on the strip, got {other:?}"),
         }
     }
@@ -389,7 +383,7 @@ mod tests {
 
     #[test]
     fn pushing_past_the_card_opens_the_panel() {
-        let beyond = 360.0 - super::HOVER_BUFFER - POPOVER_GAP - POPOVER_WIDTH - 10.0;
+        let beyond = 360.0 - super::HOVER_BUFFER - POPOVER_GAP - metrics().popover_width - 10.0;
         assert_eq!(zone(beyond, 200.0, true), Zone::Inward);
     }
 

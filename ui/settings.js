@@ -24,10 +24,8 @@ function fallbackSettings() {
     hotkey: { accelerator: "", isEnabled: false },
     opacity: 0.96,
     accentHex: "#6E9BFF",
-    panelStyle: "full",
-    panelWidth: 372,
-    panelHeight: 540,
-    cornerRadius: 26,
+    popoverWidth: 236,
+    popoverHeight: 320,
     showsHandleWhenIdle: true,
     reduceMotion: false,
     handleChips: ["clock"],
@@ -46,6 +44,9 @@ let settings = fallbackSettings();
 let catalog = { packages: [], failures: [] };
 let builtins = [];
 let displays = [];
+/// The strip's drawn size, from Rust. Kept here rather than recomputed, so the model in
+/// the preview and the panel on screen cannot disagree about how big the strip is.
+let stripPreview = { depth: 58, extent: 244, cornerRadius: 13, inverseRadius: 9 };
 let expandedRow = null;
 let activeTab = "general";
 
@@ -56,6 +57,7 @@ let activeTab = "general";
 async function commit(mutate) {
   mutate(settings);
   await invoke("update_settings", { settings });
+  stripPreview = (await invoke("panel_preview", { settings })) ?? stripPreview;
   render();
 }
 
@@ -205,34 +207,13 @@ function appearancePane() {
     ], "A shaped window can't sit on a real blur without it showing as a rectangle behind the concave corners, so the panel is a flat fill that Opacity thins rather than vibrancy."),
   );
 
-  const compact = settings.panelStyle === "compact";
   nodes.push(
-    group("When open", [
-      field(
-        "Style",
-        compact
-          ? "A row of icons against the edge. Rest on one to read that widget."
-          : "The full widget stack, one card under another.",
-        segmented(
-          [["full", "Widget stack"], ["compact", "Icons"]],
-          settings.panelStyle,
-          (style) => commit((s) => (s.panelStyle = style)),
-        ),
-      ),
-    ], "The icon strip is for keeping Notchly out of the way: it opens to a strip barely larger than the handle, and a widget's popover appears beside it only while you point at it."),
-  );
-
-  nodes.push(
-    group("Shape", [
-      field("Panel width", null, slider(settings.panelWidth, 240, 560, 1, "pt", (v) =>
-        commit((s) => (s.panelWidth = v)))),
-      field("Panel height", null, slider(settings.panelHeight, 200, 900, 1, "pt", (v) =>
-        commit((s) => (s.panelHeight = v)))),
-      field("Corner radius", null, slider(settings.cornerRadius, 0, 44, 1, "pt", (v) =>
-        commit((s) => (s.cornerRadius = v)))),
-    ], compact
-      ? "Width and height size the widget stack, which the icon strip does not use — the strip is sized to its icons."
-      : "Width and height describe how far the panel reaches from its edge and how long it runs along it."),
+    group("Popover", [
+      field("Width", null, slider(settings.popoverWidth, 180, 420, 1, "pt", (v) =>
+        commit((s) => (s.popoverWidth = v)))),
+      field("Height", null, slider(settings.popoverHeight, 200, 640, 1, "pt", (v) =>
+        commit((s) => (s.popoverHeight = v)))),
+    ], "The card that opens beside the panel when you rest on one of its rows. The panel itself is sized to its rows and has nothing to set."),
   );
 
   nodes.push(idleHandleGroup());
@@ -267,7 +248,7 @@ function accentPicker() {
   return wrap;
 }
 
-/** Scale model of the panel on its display, so shape settings can be judged here. */
+/** Scale model of the panel on its display, so placement can be judged here. */
 function preview() {
   const box = el("div");
   box.id = "preview";
@@ -276,13 +257,11 @@ function preview() {
   // SVG does the scaling — no manual scale factor to keep in sync.
   const stage = { width: 1512, height: 945 };
   const horizontal = growsHorizontally(settings.edge);
-  const depth = horizontal ? settings.panelWidth : settings.panelHeight;
-  const extent = horizontal ? settings.panelHeight : settings.panelWidth;
-  const inverse = Math.min(14, settings.cornerRadius * 0.6);
+  const { depth, extent, cornerRadius, inverseRadius } = stripPreview;
 
-  const width = horizontal ? depth : extent + 2 * inverse;
-  const height = horizontal ? extent + 2 * inverse : depth;
-  const path = notchPath(settings.edge, width, height, settings.cornerRadius, inverse);
+  const width = horizontal ? depth : extent;
+  const height = horizontal ? extent : depth;
+  const path = notchPath(settings.edge, width, height, cornerRadius, inverseRadius);
 
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
@@ -312,7 +291,7 @@ function preview() {
 
   const stageBox = el("div", "preview-stage");
   stageBox.append(svg);
-  box.append(stageBox, el("div", "hint", "open state, to scale"));
+  box.append(stageBox, el("div", "hint", "open, to scale"));
   return box;
 }
 
@@ -479,15 +458,24 @@ async function start() {
     invoke("list_widgets"),
     invoke("builtin_widgets"),
     invoke("list_displays"),
+    invoke("panel_preview", { settings }),
   ]);
 
   catalog = results[0].status === "fulfilled" ? (results[0].value ?? { packages: [], failures: [] }) : { packages: [], failures: [] };
   builtins = results[1].status === "fulfilled" ? (results[1].value ?? []) : [];
   displays = results[2].status === "fulfilled" ? (results[2].value ?? []) : [];
+  if (results[3].status === "fulfilled" && results[3].value) stripPreview = results[3].value;
 
   await listen("panel-state", (event) => {
     settings = event.payload?.settings ?? settings;
-    render();
+    // The strip resizes when a widget is enabled from the panel or the menu bar, not
+    // only from here, so the model follows the state rather than only our own writes.
+    invoke("panel_preview", { settings })
+      .then((preview) => {
+        if (preview) stripPreview = preview;
+        render();
+      })
+      .catch(() => render());
   }).catch((error) => report("panel listener failed", String(error)));
   await listen("widgets", (event) => {
     catalog = event.payload ?? { packages: [], failures: [] };

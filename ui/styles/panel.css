@@ -247,12 +247,13 @@ body[data-hover="true"] .idle-handle {
   50% { height: 11px; }
 }
 
-/* The compact open panel: a row of targets against the bezel.
-   The gap and end padding match CHIP_SPACING and CHIP_END_PADDING in geometry.rs, and
-   the icon boxes are sized from the metrics — Rust measured the strip against those
-   numbers and decides which icon the pointer is on, so a mismatch here opens the card
-   for the wrong widget. */
-.icon-strip {
+/* The Strip: what the Panel opens into.
+
+   The gap and end padding match CHIP_SPACING and CHIP_END_PADDING in geometry.rs, and a
+   Row's size along the edge comes from the metrics — Rust measured the Strip against
+   those numbers and decides which Row the pointer is on, so a mismatch here opens the
+   Popover for the wrong widget. */
+.strip {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -261,37 +262,118 @@ body[data-hover="true"] .idle-handle {
   width: 100%;
   height: 100%;
 }
-.icon-strip.stacked {
+.strip.stacked {
   flex-direction: column;
 }
 
-.strip-icon {
+.strip-row {
   appearance: none;
   border: 0;
   padding: 0;
   flex: 0 0 auto;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border-radius: 8px;
   background: transparent;
   color: var(--text-secondary);
   cursor: default;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.strip-icon .glyph-svg {
+/* Stacked, the Rows are a two-column list: glyphs in one column, readings in the next,
+   both starting at the same offset. Centring each Row's own contents instead left the
+   glyphs ragged, because a Row's width depends on how long its reading happens to be. */
+.strip.stacked .strip-row {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 7px;
+  box-sizing: border-box;
+}
+.strip:not(.stacked) .strip-row {
+  height: 100%;
+}
+.strip-row .row-glyph {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 15px;
+}
+.strip-row .glyph-svg {
   width: 15px;
   height: 15px;
 }
-.strip-icon:hover {
+.row-value {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  white-space: nowrap;
+}
+.row-value.tone-caution { color: var(--caution); }
+.row-value.tone-danger { color: var(--danger); }
+
+.strip-row:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
 }
-/* The icon whose popover is open. Marked from the state Rust pushed rather than from
-   :hover, so the highlight and the popover can never disagree about which one it is. */
-.strip-icon[data-active="true"] {
+/* The Row whose Popover is open. Marked from the state Rust pushed rather than from
+   :hover, so the highlight and the Popover can never disagree about which one it is. */
+.strip-row[data-active="true"] {
   color: var(--accent);
   background: rgba(255, 255, 255, 0.12);
 }
+.strip-row[data-active="true"] .row-value {
+  color: var(--accent);
+}
+
+/* The Rows slide out of the bezel rather than appearing in place, so opening reads as
+   the strip coming out of the edge — which is what the shape underneath is doing. The
+   stagger is small enough to read as one movement, not as a list building itself. */
+.strip-row {
+  animation: row-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+body[data-edge="trailing"] .strip-row { --row-from: 14px; }
+body[data-edge="leading"] .strip-row { --row-from: -14px; }
+body[data-edge="top"] .strip-row { --row-from: 0; --row-from-y: -14px; }
+body[data-edge="bottom"] .strip-row { --row-from: 0; --row-from-y: 14px; }
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--row-from, 14px), var(--row-from-y, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+.strip-row:nth-child(2) { animation-delay: 0.02s; }
+.strip-row:nth-child(3) { animation-delay: 0.04s; }
+.strip-row:nth-child(4) { animation-delay: 0.06s; }
+.strip-row:nth-child(5) { animation-delay: 0.08s; }
+.strip-row:nth-child(n + 6) { animation-delay: 0.1s; }
+
+/* Three bars that animate only while something is actually playing. */
+.row-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 11px;
+}
+.row-bars .bar {
+  width: 2px;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--text-tertiary);
+}
+.row-bars.playing .bar {
+  background: var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+.row-bars.playing .bar:nth-child(2) { animation-delay: 0.15s; }
+.row-bars.playing .bar:nth-child(3) { animation-delay: 0.3s; }
 
 /* The popover: the middle state between the handle and the whole panel. It lives
    outside the clip layer, so it is positioned in window coordinates from the same
@@ -319,7 +401,16 @@ body[data-hover="true"] .idle-handle {
   to { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #popover { animation: none; }
+  #popover,
+  .strip-row {
+    animation: none;
+  }
+}
+/* The setting, as opposed to the system preference. Both have to reach the strip, or
+   "reduce motion" would still leave the rows sliding. */
+body[data-reduce-motion="true"] .strip-row,
+body[data-reduce-motion="true"] #popover {
+  animation: none;
 }
 .pop-head {
   display: flex;
@@ -423,88 +514,7 @@ body[data-hover="true"] .idle-handle {
   display: block;
 }
 
-/* Open panel */
-#panel-body {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 0 14px;
-  box-sizing: border-box;
-}
-
-/* The rail replaces a titled header band. It names nothing — you already know which
-   app you opened — and its two actions stay out of the way until the pointer arrives. */
-#panel-rail {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 22px;
-  flex: 0 0 auto;
-}
-#drag-grip {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  width: 34px;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.16);
-  cursor: grab;
-  transition: background 0.14s ease;
-}
-body[data-hover="true"] #drag-grip {
-  background: rgba(255, 255, 255, 0.32);
-}
-#drag-grip:active {
-  cursor: grabbing;
-}
-/* Quiet, never absent. These were faded in on `body[data-hover]`, which is set from
-   document mouseenter/mouseleave — the events a non-activating panel does not deliver
-   reliably, so the only way to reach Settings from the panel could vanish entirely.
-   An affordance may be understated; it may not be conditional on an unreliable signal. */
-.rail-actions {
-  position: absolute;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.rail-actions button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--text-tertiary);
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  font-size: 13px;
-  cursor: default;
-  opacity: 0.8;
-  display: grid;
-  place-items: center;
-  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
-}
-.rail-actions button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-  opacity: 1;
-}
-
-#widget-stack {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 8px 0 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-#widget-stack::-webkit-scrollbar {
-  width: 0;
-}
-
-/* Widget cards */
+/* A widget's own view, drawn inside a Popover. */
 .card {
   /* Flex items shrink by default once the stack overflows, which silently clipped
      the bottom of every card. */

@@ -7,7 +7,7 @@
 //! animates the shape inside it.
 
 use crate::geometry::{PanelGeometry, Placement, Rect};
-use crate::settings::{IdleChip, PanelStyle, Settings};
+use crate::settings::{IdleChip, Settings};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -53,9 +53,9 @@ pub struct PanelSnapshot {
 pub struct PanelState {
     pub settings: Settings,
     pub expanded: bool,
-    /// What the pointer is resting on, if anything. In the full style this is only ever
-    /// set while closed; the compact strip keeps it while open, because the strip is
-    /// small enough to draw a popover beside.
+    /// What the pointer is resting on, if anything — an Idle Chip while closed, a Strip
+    /// Row while open. The window reserves room beside the shape in both states, so
+    /// there is nowhere it can be hidden.
     pub popover: Option<Popover>,
     /// Bumped on every state change so a stale collapse timer can tell it was replaced.
     generation: Arc<AtomicU64>,
@@ -254,11 +254,9 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
 /// so the caller can avoid refreshing the window on every poll.
 pub fn set_popover(app: &AppHandle, target: Option<Popover>) -> bool {
     let changed = with_state(app, |state| {
-        // A popover under the open Widget Stack would be drawn behind it. The compact
-        // strip is the exception: it is the size of a handle, so there is room beside it.
-        let hidden_by_the_panel =
-            state.expanded && state.settings.panel_style != PanelStyle::Compact;
-        let wanted = if hidden_by_the_panel { None } else { target };
+        // Open or closed, the shape is a strip against the bezel with room beside it, so
+        // a Popover is never hidden by the Panel and needs no guard here.
+        let wanted = target;
         if state.popover == wanted {
             return false;
         }
@@ -286,18 +284,12 @@ pub fn open(app: &AppHandle) {
     }
     // Grow the (transparent) window first so the animation has room to play out.
     refresh(app, true);
-    // Don't leave the System widget blank until the first scheduled tick. The compact
-    // strip shows no readings at all until a popover is opened, so it samples nothing yet.
-    if !compact_style(app) {
-        crate::services::ambient::Ambient::sample_now(app, true);
-    }
+    // The Strip's rows carry live readings, so don't leave them blank until the first
+    // scheduled tick. Processes are only wanted by the System popover, not by the row.
+    crate::services::ambient::Ambient::sample_now(app, false);
     if let Some(window) = app.get_webview_window(PANEL_LABEL) {
         let _ = window.show();
     }
-}
-
-pub fn compact_style(app: &AppHandle) -> bool {
-    with_state(app, |state| state.settings.panel_style == PanelStyle::Compact).unwrap_or(false)
 }
 
 pub fn close(app: &AppHandle) {
@@ -308,8 +300,8 @@ pub fn close(app: &AppHandle) {
             return;
         }
         guard.expanded = false;
-        // The compact strip can be holding a popover open as it closes; the collapsed
-        // handle has nothing to anchor one to, and the snug window has no room for it.
+        // The Strip can be holding a Popover open as it closes, and the collapsed handle
+        // has nothing to anchor one to.
         guard.popover = None;
         guard.generation.fetch_add(1, Ordering::SeqCst) + 1
     };

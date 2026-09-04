@@ -1,10 +1,10 @@
 import { panel, listen, invoke } from "./lib/bridge.js";
 import { renderShape } from "./lib/panel-view.js";
 import { renderIdleHandle } from "./lib/idle-handle.js";
-import { renderIconStrip } from "./lib/icon-strip.js";
+import { renderStrip } from "./lib/strip.js";
 import { chipContent, widgetContent, contentRefreshes } from "./lib/popover.js";
 import * as builtin from "./lib/builtin-widgets.js";
-import { createWidgetCard, startBridgeRelay, trackManifest, forgetFrames } from "./lib/widget-host.js";
+import { startBridgeRelay, forgetFrames } from "./lib/widget-host.js";
 
 /** Latest state pushed from Rust. Rust owns the window; this owns what's drawn in it. */
 let current = null;
@@ -14,9 +14,6 @@ let catalog = { packages: [], failures: [] };
 let descriptors = [];
 let clipboard = [];
 let cpuHistory = new Array(48).fill(0);
-/// Web widget iframes are expensive to recreate, so the stack is only rebuilt when the
-/// set of widgets actually changes — not on every metrics tick.
-let stackSignature = "";
 /// The popover's contents are rebuilt only when they change to a different thing, for
 /// the same reason: a custom widget's iframe and the launcher's typed query do not
 /// survive being recreated.
@@ -36,19 +33,12 @@ function render() {
 
   const swapContent = () => {
     const handle = document.getElementById("idle-handle");
-    const strip = document.getElementById("icon-strip");
-    const body = document.getElementById("panel-body");
+    const strip = document.getElementById("strip");
     if (metrics.expanded) {
       handle.hidden = true;
-      body.hidden = isCompact();
-      strip.hidden = !isCompact();
-      if (isCompact()) {
-        renderIconStrip(strip, settings, metrics, current.popover?.value, widgetName);
-      } else {
-        renderStack(settings);
-      }
+      strip.hidden = false;
+      renderStrip(strip, settings, metrics, ambient, current.popover?.value, widgetName);
     } else {
-      body.hidden = true;
       strip.hidden = true;
       handle.hidden = !metrics.showsContent;
       if (metrics.showsContent) renderIdleHandle(handle, settings, ambient, metrics.handleRing);
@@ -61,8 +51,6 @@ function render() {
   renderPopover();
   renderShape(metrics, settings, swapContent);
 }
-
-const isCompact = () => current?.settings.panelStyle === "compact";
 
 /**
  * Places the popover beside the shape, in the room the enlarged window buys.
@@ -77,8 +65,7 @@ function renderPopover() {
   if (!node) return;
   const target = current?.popover;
   const metrics = current?.metrics;
-  // The open Widget Stack fills its window; only the compact strip leaves room beside it.
-  if (!target || !metrics || (metrics.expanded && !isCompact())) {
+  if (!target || !metrics) {
     node.hidden = true;
     node.replaceChildren();
     popoverSignature = "";
@@ -157,69 +144,8 @@ function fillPopover(node, target) {
   forgetFrames();
 }
 
-const BUILTIN_IDS = ["clock", "media", "system", "launcher", "clipboard"];
-
 function slotPrefs(settings, widgetId) {
   return settings.slots.find((slot) => slot.widgetId === widgetId)?.preferences ?? {};
-}
-
-function renderStack(settings) {
-  const stack = document.getElementById("widget-stack");
-  const slots = settings.slots.filter((slot) => slot.isEnabled);
-  const signature = slots
-    .map((slot) => `${slot.widgetId}:${catalog.packages.find((p) => p.manifest.id === slot.widgetId)?.revision ?? 0}`)
-    .join("|");
-
-  if (signature !== stackSignature) {
-    stackSignature = signature;
-    stack.replaceChildren();
-    for (const slot of slots) {
-      const node = buildCard(slot, settings);
-      if (node) stack.append(node);
-    }
-    forgetFrames();
-  } else {
-    // Same widgets, new numbers: refresh the built-ins in place.
-    for (const slot of slots) {
-      if (!BUILTIN_IDS.includes(slot.widgetId)) continue;
-      // The launcher owns live input; rebuilding it would throw away what was typed.
-      if (slot.widgetId === "launcher") continue;
-      const existing = stack.querySelector(`[data-builtin="${slot.widgetId}"]`);
-      const replacement = buildCard(slot, settings);
-      if (existing && replacement) existing.replaceWith(replacement);
-    }
-  }
-}
-
-function buildCard(slot, settings) {
-  const prefs = slotPrefs(settings, slot.widgetId);
-  let node = null;
-  switch (slot.widgetId) {
-    case "clock":
-      node = builtin.clockWidget(prefs);
-      break;
-    case "system":
-      node = builtin.systemWidget(ambient.metrics ?? {}, cpuHistory, prefs);
-      break;
-    case "media":
-      node = builtin.mediaWidget(ambient.media);
-      break;
-    case "clipboard":
-      node = builtin.clipboardWidget(clipboard, prefs);
-      break;
-    case "launcher":
-      node = builtin.launcherWidget();
-      break;
-    default: {
-      const pkg = catalog.packages.find((p) => p.manifest.id === slot.widgetId);
-      if (!pkg) return null;
-      const card = createWidgetCard(pkg, { onReload: (id) => invoke("reload_widget", { widgetId: id }) });
-      trackManifest(card, pkg.manifest);
-      return card;
-    }
-  }
-  if (node) node.dataset.builtin = slot.widgetId;
-  return node;
 }
 
 // Opening and closing on hover is decided in Rust, which owns the window frame and
@@ -233,11 +159,15 @@ function pointerLeft() {
   document.body.dataset.hover = "false";
 }
 
-// Drag the handle to slide the panel along its edge, or across the midpoint of the
-// display to re-dock it. A press that never moves is a tap, which opens the panel.
+// Drag the panel to slide it along its edge, or across the midpoint of the display to
+// re-dock it. A press that never moves is a tap: it opens the panel when closed, and
+// presses whatever Row is under it when open.
+//
+// The strip is draggable rather than a grab handle within it, because there is no
+// chrome left to put one in — and a press that does not move never becomes a drag, so
+// the two gestures do not compete.
 function onMouseDown(event) {
   if (event.button !== 0) return;
-  if (current?.metrics.expanded && !event.target.closest("#drag-grip")) return;
   dragStart = { x: event.screenX, y: event.screenY, moved: false };
 }
 
@@ -255,7 +185,7 @@ function onMouseMove(event) {
   if (dragging) panel.drag();
 }
 
-function onMouseUp() {
+function onMouseUp(event) {
   if (!dragStart) return;
   const wasDrag = dragStart.moved;
   dragStart = null;
@@ -265,9 +195,28 @@ function onMouseUp() {
     return;
   }
   if (!current) return;
-  if (!current.metrics.expanded && current.settings.activation !== "hotkeyOnly") {
+  if (current.metrics.expanded) {
+    pressRow(event.target.closest(".strip-row"));
+  } else if (current.settings.activation !== "hotkeyOnly") {
     panel.open();
   }
+}
+
+/**
+ * A press on a Row, as opposed to resting on one.
+ *
+ * Rust owns which Popover is showing, so this asks for one rather than drawing it —
+ * drawing it here would last until the next poll, when the watchdog would replace it
+ * with whatever it thinks the pointer is on.
+ */
+function pressRow(row) {
+  if (!row) return;
+  if (row.dataset.row === "settings") {
+    invoke("open_settings");
+    return;
+  }
+  const showing = current?.popover?.value === row.dataset.row;
+  invoke("show_widget_popover", { widgetId: showing ? null : row.dataset.row });
 }
 
 function launch(path) {
@@ -286,36 +235,9 @@ function wire() {
     if (event.key === "Escape") panel.close();
   });
 
-  wireStrip();
-
-  // A widget's view is drawn in the stack or in a popover card, so both get the same
-  // delegated handlers rather than the stack getting a privileged copy.
-  for (const surface of [document.getElementById("widget-stack"), document.getElementById("popover")]) {
-    wireWidgetSurface(surface);
-  }
-
-  document.getElementById("close-button").addEventListener("click", () => panel.close());
-
-  document.getElementById("settings-button").addEventListener("click", () => {
-    invoke("open_settings");
-  });
-}
-
-/** The compact strip: its icons are pressed, not just rested on. */
-function wireStrip() {
-  const strip = document.getElementById("icon-strip");
-  strip.addEventListener("click", (event) => {
-    const icon = event.target.closest(".strip-icon");
-    if (!icon) return;
-    if (icon.dataset.icon === "settings") {
-      invoke("open_settings");
-      return;
-    }
-    // Rust owns which popover is showing, so a click asks for one rather than drawing
-    // it — otherwise the pointer watchdog would put it straight back.
-    const showing = current?.popover?.value === icon.dataset.icon;
-    invoke("show_widget_popover", { widgetId: showing ? null : icon.dataset.icon });
-  });
+  // A widget's view is only ever drawn in a popover now, so that is the one surface
+  // its transport buttons, rows and search field are delegated from.
+  wireWidgetSurface(document.getElementById("popover"));
 }
 
 function wireWidgetSurface(surface) {
@@ -397,13 +319,14 @@ async function start() {
   });
   await listen("widgets", (event) => {
     catalog = event.payload ?? { packages: [], failures: [] };
-    stackSignature = "";
+    // A reloaded widget's revision changed, so its popover has to be rebuilt.
+    popoverSignature = "";
     render();
   });
 
   current = await panel.state();
   catalog = (await invoke("list_widgets")) ?? { packages: [], failures: [] };
-  // Only for the names on the strip and its cards; the descriptors never change at runtime.
+  // Only for the names on the strip and its popovers; descriptors never change at runtime.
   descriptors = (await invoke("builtin_widgets")) ?? [];
   startBridgeRelay();
   render();

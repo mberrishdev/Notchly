@@ -181,6 +181,13 @@ fn builtin_widgets() -> Vec<builtins::Descriptor> {
     builtins::all()
 }
 
+/// The Strip as it would be drawn for `settings`, so the Settings window can model it
+/// without a second implementation of the arithmetic.
+#[tauri::command]
+fn panel_preview(settings: Settings) -> geometry::StripPreview {
+    geometry::StripPreview::resolve(&settings)
+}
+
 #[tauri::command]
 fn list_displays(app: AppHandle) -> Vec<String> {
     app.get_webview_window(panel::PANEL_LABEL)
@@ -386,6 +393,7 @@ pub fn run() {
             launch_app,
             builtin_widgets,
             list_displays,
+            panel_preview,
             open_settings,
             show_widget_popover,
             create_starter_widget,

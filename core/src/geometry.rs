@@ -5,7 +5,7 @@
 //! removes the axis flip the Swift version needed, so alignment reads the same way on
 //! every edge — 0 is always top or left.
 
-use crate::settings::{IdleChip, PanelStyle, ScreenEdge, Settings};
+use crate::settings::{IdleChip, ScreenEdge, Settings};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -51,26 +51,34 @@ pub const SHADOW_MARGIN: f64 = 34.0;
 /// The popover's own footprint. The frontend is handed the width rather than choosing
 /// it, because the hover zones have to know exactly where the card is: reaching over to
 /// read one must not be mistaken for the push that opens the panel.
-pub const POPOVER_WIDTH: f64 = 232.0;
 pub const POPOVER_GAP: f64 = 10.0;
-/// Room reserved along the edge for a card. A card is content-sized and the frontend
-/// caps it here, so the window is never asked to hold more than it was measured for.
-pub const POPOVER_HEIGHT: f64 = 300.0;
 
-/// The Icon Strip's own dimensions.
+/// The Strip's own dimensions, per orientation.
 ///
-/// Fixed rather than derived from the panel size settings: the strip is a row of
-/// targets, not a canvas, so a wider one would only spread the icons further apart.
-/// Someone who wants a surface they can size is asking for the full Widget Stack.
-pub const STRIP_DEPTH: f64 = 40.0;
-pub const ICON_EXTENT: f64 = 28.0;
+/// Fixed rather than set by the user: every Row reserves the same room whether or not
+/// its reading currently has a value, for the reason an Idle Chip does — a Strip that
+/// resized itself when a song started would move the drag target out from under the
+/// pointer. The two orientations differ because a Row lays its value beside the glyph on
+/// the side edges and under it on the top and bottom.
+///
+/// `grows_horizontally` is true on the left and right edges, where Rows stack in a
+/// column: the Strip's depth is then the width a value like `15:32` needs, and a Row's
+/// extent is its height.
+pub fn strip_depth(grows_horizontally: bool) -> f64 {
+    // Wide enough for the longest reading a Row shows — `13:03`, `100%` — beside its
+    // glyph, with the end padding the Rows are laid out with still clear on both sides.
+    if grows_horizontally { 66.0 } else { 38.0 }
+}
 
-/// The flare at each end of the strip, which the icons have to start clear of.
+pub fn row_extent(grows_horizontally: bool) -> f64 {
+    if grows_horizontally { 26.0 } else { 62.0 }
+}
+
+/// The flare at each end of the Strip, which the Rows have to start clear of.
 ///
-/// A free function because `icon_spans` needs it without a `PanelGeometry` in hand: the
-/// strip is a fixed size, so this is a constant in all but name.
-pub fn strip_inverse_radius() -> f64 {
-    (STRIP_DEPTH * 0.3).min(9.0)
+/// A free function because `row_spans` needs it without a `PanelGeometry` in hand.
+pub fn strip_inverse_radius(grows_horizontally: bool) -> f64 {
+    (strip_depth(grows_horizontally) * 0.3).min(9.0)
 }
 
 /// Slack around the idle handle so the pointer doesn't need pixel precision.
@@ -154,9 +162,9 @@ pub fn chip_at(spans: &[ChipSpan], offset: f64) -> Option<IdleChip> {
         .map(|span| span.chip)
 }
 
-/// One target on the Icon Strip.
+/// One Row on the Strip.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IconSlot {
+pub enum StripRow {
     /// Opens the settings window. Always first, so its position never moves as widgets
     /// are added and removed.
     Settings,
@@ -164,59 +172,96 @@ pub enum IconSlot {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct IconSpan {
-    pub slot: IconSlot,
+pub struct RowSpan {
+    pub row: StripRow,
     pub start: f64,
     pub length: f64,
 }
 
-/// Size of the Icon Strip: the settings action plus one icon per enabled slot.
+/// Size of the Strip: the settings action plus one Row per enabled Slot.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StripLayout {
     pub depth: f64,
     pub extent: f64,
+    /// A single Row's room along the edge. Handed to the frontend so the boxes it draws
+    /// and the spans Rust tests the pointer against are the same size.
+    pub row: f64,
 }
 
 impl StripLayout {
     pub fn resolve(settings: &Settings) -> Self {
-        let icons = settings.enabled_slot_count() + 1;
-        let gaps = CHIP_SPACING * icons.saturating_sub(1) as f64;
+        let horizontal = settings.edge.grows_horizontally();
+        let rows = settings.enabled_slot_count() + 1;
+        let each = row_extent(horizontal);
+        let gaps = CHIP_SPACING * rows.saturating_sub(1) as f64;
         Self {
-            depth: STRIP_DEPTH,
-            extent: icons as f64 * ICON_EXTENT + gaps + CHIP_END_PADDING * 2.0,
+            depth: strip_depth(horizontal),
+            extent: rows as f64 * each + gaps + CHIP_END_PADDING * 2.0,
+            row: each,
         }
     }
 }
 
-/// Lays the icons out along the strip.
+/// Lays the Rows out along the Strip.
 ///
-/// The same reason `chip_spans` lives here: only Rust can answer "which icon is the
+/// The same reason `chip_spans` lives here: only Rust can answer "which Row is the
 /// pointer on", because the panel never activates and so cannot rely on the web view
-/// receiving pointer events. The frontend is handed `ICON_EXTENT` in the metrics and
-/// draws boxes of exactly that size, so the two cannot drift.
-pub fn icon_spans(settings: &Settings) -> Vec<IconSpan> {
+/// receiving pointer events.
+pub fn row_spans(settings: &Settings) -> Vec<RowSpan> {
+    let horizontal = settings.edge.grows_horizontally();
+    let each = row_extent(horizontal);
     let mut spans = Vec::with_capacity(settings.enabled_slot_count() + 1);
     // Offsets are measured from the leading end of the drawn shape, flare included,
     // because that is the rectangle the pointer is tested against.
-    let mut cursor = strip_inverse_radius() + CHIP_END_PADDING;
-    let mut push = |slot: IconSlot, cursor: &mut f64| {
-        spans.push(IconSpan { slot, start: *cursor, length: ICON_EXTENT });
-        *cursor += ICON_EXTENT + CHIP_SPACING;
+    let mut cursor = strip_inverse_radius(horizontal) + CHIP_END_PADDING;
+    let mut push = |row: StripRow, cursor: &mut f64| {
+        spans.push(RowSpan { row, start: *cursor, length: each });
+        *cursor += each + CHIP_SPACING;
     };
-    push(IconSlot::Settings, &mut cursor);
+    push(StripRow::Settings, &mut cursor);
     for slot in settings.slots.iter().filter(|slot| slot.is_enabled) {
-        push(IconSlot::Widget(slot.widget_id.clone()), &mut cursor);
+        push(StripRow::Widget(slot.widget_id.clone()), &mut cursor);
     }
     spans
 }
 
-/// The icon at `offset` along the strip. As with the chips, the gaps belong to no
-/// icon, so sliding across the strip does not flash a card for every widget on the way.
-pub fn icon_at(spans: &[IconSpan], offset: f64) -> Option<&IconSlot> {
+/// The Row at `offset` along the Strip. As with the chips, the gaps belong to no Row, so
+/// sliding along the Strip does not flash a Popover for every widget on the way.
+pub fn row_at(spans: &[RowSpan], offset: f64) -> Option<&StripRow> {
     spans
         .iter()
         .find(|span| offset >= span.start && offset < span.start + span.length)
-        .map(|span| &span.slot)
+        .map(|span| &span.row)
+}
+
+/// The Strip's drawn shape, with no display involved.
+///
+/// Its size falls out of the settings alone — only *where* it sits needs a screen — so
+/// the Settings window can model it without one, and without a second implementation of
+/// the arithmetic.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StripPreview {
+    /// How far it protrudes from the edge, and how far it runs along it. Both are the
+    /// drawn shape, so the extent includes the flare at each end.
+    pub depth: f64,
+    pub extent: f64,
+    pub corner_radius: f64,
+    pub inverse_radius: f64,
+}
+
+impl StripPreview {
+    pub fn resolve(settings: &Settings) -> Self {
+        let horizontal = settings.edge.grows_horizontally();
+        let strip = StripLayout::resolve(settings);
+        let inverse = strip_inverse_radius(horizontal);
+        Self {
+            depth: strip.depth,
+            extent: strip.extent + 2.0 * inverse,
+            corner_radius: (strip.depth / 2.0).min(13.0),
+            inverse_radius: inverse,
+        }
+    }
 }
 
 /// Where the panel should dock for a given pointer position.
@@ -286,56 +331,39 @@ pub struct PanelMetrics {
     pub popover_width: f64,
     /// How far from the shape it is drawn, for the same reason again.
     pub popover_offset: f64,
-    /// How tall a popover may grow before its content scrolls. The compact window is
-    /// only sized to hold this much, so a card that ignored it would be clipped.
+    /// How tall a popover may grow before its content scrolls. The window is only sized
+    /// to hold this much, so a popover that ignored it would be clipped.
     pub popover_height: f64,
-    /// Side of one Icon Strip target. Handed over for the same reason as `handle_ring`:
-    /// Rust measured the strip against it and decides what the pointer is on.
-    pub strip_icon_extent: f64,
+    /// One Strip Row's room along the edge, and the Strip's depth across it. Handed over
+    /// for the same reason as `handle_ring`: Rust measured the Strip against these and
+    /// decides what the pointer is on, so the frontend must not derive its own.
+    pub strip_row_extent: f64,
+    pub strip_depth: f64,
 }
 
 pub struct PanelGeometry {
     pub edge: ScreenEdge,
     pub screen: Rect,
     pub alignment: f64,
-    pub body_depth: f64,
-    pub body_extent: f64,
     pub handle: HandleLayout,
     pub strip: StripLayout,
-    pub style: PanelStyle,
-    pub corner_radius: f64,
+    pub popover_width: f64,
+    pub popover_height: f64,
     pub edge_inset: f64,
 }
 
 impl PanelGeometry {
     pub fn new(settings: &Settings, screen: Rect, widget_count: usize) -> Self {
-        // On the top and bottom edges the "width" setting means the extent along the
-        // edge, so the user never has to re-tune both sliders after re-docking.
-        let (body_depth, body_extent) = if settings.edge.grows_horizontally() {
-            (settings.panel_width, settings.panel_height)
-        } else {
-            (settings.panel_height, settings.panel_width)
-        };
         Self {
             edge: settings.edge,
             screen,
             alignment: settings.alignment,
-            body_depth,
-            body_extent,
             handle: HandleLayout::resolve(settings, widget_count),
             strip: StripLayout::resolve(settings),
-            style: settings.panel_style,
-            corner_radius: settings.corner_radius,
+            popover_width: settings.popover_width,
+            popover_height: settings.popover_height,
             edge_inset: settings.edge_inset,
         }
-    }
-
-    pub fn is_compact(&self) -> bool {
-        self.style == PanelStyle::Compact
-    }
-
-    pub fn expanded_inverse_radius(&self) -> f64 {
-        (self.corner_radius * 0.6).min(14.0)
     }
 
     pub fn handle_inverse_radius(&self) -> f64 {
@@ -354,10 +382,10 @@ impl PanelGeometry {
         }
     }
 
-    /// The strip is shaped like a handle that shows content, because that is what it is
-    /// — a strip against the bezel — rather than a small version of the open panel.
+    /// The Strip is shaped like a handle that shows content, because that is what it is
+    /// — a strip against the bezel — rather than a small version of anything.
     pub fn strip_inverse_radius(&self) -> f64 {
-        strip_inverse_radius()
+        strip_inverse_radius(self.edge.grows_horizontally())
     }
 
     pub fn strip_corner_radius(&self) -> f64 {
@@ -365,41 +393,30 @@ impl PanelGeometry {
     }
 
     fn depth(&self, expanded: bool) -> f64 {
-        match (expanded, self.is_compact()) {
-            (false, _) => self.handle.depth,
-            (true, false) => self.body_depth,
-            (true, true) => self.strip.depth,
-        }
+        if expanded { self.strip.depth } else { self.handle.depth }
     }
 
     fn extent(&self, expanded: bool) -> f64 {
-        match (expanded, self.is_compact()) {
-            (false, _) => self.handle.extent,
-            (true, false) => self.body_extent,
-            (true, true) => self.strip.extent,
-        }
+        if expanded { self.strip.extent } else { self.handle.extent }
     }
 
     fn inverse_radius(&self, expanded: bool) -> f64 {
-        match (expanded, self.is_compact()) {
-            (false, _) => self.handle_inverse_radius(),
-            (true, false) => self.expanded_inverse_radius(),
-            (true, true) => self.strip_inverse_radius(),
-        }
+        if expanded { self.strip_inverse_radius() } else { self.handle_inverse_radius() }
     }
 
     fn margin(&self, expanded: bool) -> f64 {
         if expanded { SHADOW_MARGIN } else { HOVER_BUFFER }
     }
 
-    /// Room a popover needs beside the shape, in depth and along the edge.
+    /// Room a Popover needs beside the shape, in depth and along the edge.
     ///
-    /// Only the compact open state reserves it. Everywhere else a popover is drawn in
-    /// room the window already has: the full panel's window is far larger than the handle,
-    /// which is what a chip's popover has always been drawn in.
+    /// Only the open window reserves it. The idle window stays snug around the Handle,
+    /// because an always-large transparent window would swallow clicks meant for the
+    /// desktop — and an Idle Chip's Popover does not need the reserve here, since
+    /// showing one already puts the window at its open size.
     fn popover_reserve(&self, expanded: bool) -> (f64, f64) {
-        if expanded && self.is_compact() {
-            (popover_offset() + POPOVER_WIDTH, POPOVER_HEIGHT)
+        if expanded {
+            (popover_offset() + self.popover_width, self.popover_height)
         } else {
             (0.0, 0.0)
         }
@@ -494,10 +511,10 @@ impl PanelGeometry {
             expanded,
             shape_width,
             shape_height,
-            corner_radius: match (expanded, self.is_compact()) {
-                (false, _) => self.handle_corner_radius(),
-                (true, false) => self.corner_radius,
-                (true, true) => self.strip_corner_radius(),
+            corner_radius: if expanded {
+                self.strip_corner_radius()
+            } else {
+                self.handle_corner_radius()
             },
             inverse_radius: inverse,
             shows_content: expanded || self.handle.shows_content,
@@ -506,10 +523,11 @@ impl PanelGeometry {
             window_width: window.width,
             window_height: window.height,
             handle_ring: self.handle.ring,
-            popover_width: POPOVER_WIDTH,
+            popover_width: self.popover_width,
             popover_offset: popover_offset(),
-            popover_height: POPOVER_HEIGHT,
-            strip_icon_extent: ICON_EXTENT,
+            popover_height: self.popover_height,
+            strip_row_extent: self.strip.row,
+            strip_depth: self.strip.depth,
         }
     }
 }
@@ -517,7 +535,7 @@ impl PanelGeometry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::{ActivationMode, IdleChip, PanelStyle};
+    use crate::settings::{ActivationMode, IdleChip};
 
     fn screen() -> Rect {
         Rect::new(0.0, 0.0, 1512.0, 982.0)
@@ -527,8 +545,6 @@ mod tests {
         Settings {
             edge,
             alignment,
-            panel_width: 372.0,
-            panel_height: 540.0,
             handle_thickness: 5.0,
             handle_length: 108.0,
             handle_chips: Vec::new(),
@@ -581,11 +597,13 @@ mod tests {
     }
 
     #[test]
-    fn width_and_height_swap_roles_on_the_top_and_bottom_edges() {
-        let side = geometry(ScreenEdge::Trailing, 0.5);
-        let top = geometry(ScreenEdge::Top, 0.5);
-        assert_eq!((side.body_depth, side.body_extent), (372.0, 540.0));
-        assert_eq!((top.body_depth, top.body_extent), (540.0, 372.0));
+    fn the_strip_turns_with_its_edge_rather_than_keeping_one_orientation() {
+        // Rows stack down the side edges and run along the top and bottom, so the strip
+        // is deep and short on one and shallow and long on the other.
+        let side = StripLayout::resolve(&settings(ScreenEdge::Trailing, 0.5));
+        let top = StripLayout::resolve(&settings(ScreenEdge::Top, 0.5));
+        assert!(side.depth > top.depth);
+        assert!(side.extent < top.extent);
     }
 
     #[test]
@@ -774,14 +792,6 @@ mod tests {
         assert_eq!(during.shape_width, after.shape_width);
     }
 
-    fn compact(edge: ScreenEdge) -> PanelGeometry {
-        let s = Settings {
-            panel_style: PanelStyle::Compact,
-            ..settings(edge, 0.5)
-        };
-        PanelGeometry::new(&s, screen(), s.enabled_slot_count())
-    }
-
     #[test]
     fn hiding_the_handle_leaves_the_bare_line_without_forgetting_the_chips() {
         let chosen = vec![IdleChip::Clock, IdleChip::Cpu];
@@ -801,28 +811,48 @@ mod tests {
     }
 
     #[test]
-    fn the_compact_open_panel_is_a_strip_not_a_stack() {
-        let full = geometry(ScreenEdge::Trailing, 0.5).metrics_in(true, true);
-        let strip = compact(ScreenEdge::Trailing).metrics_in(true, true);
-        assert!(strip.shape_width < full.shape_width / 4.0);
-        assert!(strip.shape_height < full.shape_height / 2.0);
+    fn the_open_panel_is_a_strip_barely_larger_than_the_handle() {
+        // The Strip is the whole Open state now: it must stay a strip against the bezel
+        // rather than drift back towards a surface with a footprint.
+        let g = geometry(ScreenEdge::Trailing, 0.5);
+        let strip = g.metrics_in(true, true);
+        assert!(strip.shape_width <= strip_depth(true) + 1.0);
+        // Deep enough for a reading beside its glyph, which is the point of a Row.
+        assert!(strip.shape_width > 40.0);
     }
 
     #[test]
-    fn the_compact_window_reserves_room_for_a_popover_beside_the_strip() {
+    fn a_row_is_deeper_on_the_side_edges_where_its_value_sits_beside_the_glyph() {
+        assert!(strip_depth(true) > strip_depth(false));
+        // And shorter along the edge, because a column of rows stacks rather than runs.
+        assert!(row_extent(true) < row_extent(false));
+    }
+
+    #[test]
+    fn the_window_reserves_room_for_a_popover_beside_the_strip() {
         // Without the reserve a popover would be drawn outside the window and clipped.
-        let g = compact(ScreenEdge::Trailing);
+        let g = geometry(ScreenEdge::Trailing, 0.5);
         let open = g.window_frame(true);
         let strip = g.metrics_in(true, true);
-        assert!(open.width >= strip.shape_width + popover_offset() + POPOVER_WIDTH);
-        assert!(open.height >= POPOVER_HEIGHT);
+        assert!(open.width >= strip.shape_width + popover_offset() + g.popover_width);
+        assert!(open.height >= g.popover_height);
     }
 
     #[test]
-    fn a_compact_strip_still_hugs_its_edge_with_the_popover_room_inward() {
+    fn an_idle_chips_popover_borrows_the_open_window_rather_than_widening_the_idle_one() {
+        // A chip can open a popover while the panel is closed. The room comes from
+        // putting the window at its open size, never from fattening the idle window,
+        // which has to stay snug or it swallows clicks meant for the desktop.
+        let g = geometry(ScreenEdge::Trailing, 0.5);
+        assert!(g.window_frame(false).width < popover_offset());
+        assert!(g.window_frame(true).width >= popover_offset() + g.popover_width);
+    }
+
+    #[test]
+    fn a_strip_still_hugs_its_edge_with_the_popover_room_inward() {
         // The reserve must grow the window inward, never push the strip off the bezel.
         for edge in [ScreenEdge::Trailing, ScreenEdge::Leading, ScreenEdge::Top, ScreenEdge::Bottom] {
-            let m = compact(edge).metrics_in(true, true);
+            let m = geometry(edge, 0.5).metrics_in(true, true);
             let flush = match edge {
                 ScreenEdge::Trailing => (m.offset_x + m.shape_width - m.window_width).abs(),
                 ScreenEdge::Leading => m.offset_x.abs(),
@@ -834,9 +864,9 @@ mod tests {
     }
 
     #[test]
-    fn a_compact_strip_never_hangs_off_the_ends_of_its_edge() {
+    fn a_strip_never_hangs_off_the_ends_of_its_edge() {
         for alignment in [0.0, 0.5, 1.0] {
-            let s = Settings { panel_style: PanelStyle::Compact, ..settings(ScreenEdge::Trailing, alignment) };
+            let s = settings(ScreenEdge::Trailing, alignment);
             let frame = PanelGeometry::new(&s, screen(), s.enabled_slot_count()).window_frame(true);
             assert!(frame.y >= screen().y - 0.001, "alignment {alignment}");
             assert!(frame.max_y() <= screen().max_y() + 0.001, "alignment {alignment}");
@@ -844,41 +874,44 @@ mod tests {
     }
 
     #[test]
-    fn the_settings_icon_leads_the_strip_and_every_enabled_widget_follows() {
-        let s = Settings { panel_style: PanelStyle::Compact, ..Default::default() };
-        let spans = icon_spans(&s);
-        assert_eq!(spans.len(), s.enabled_slot_count() + 1);
-        assert_eq!(spans[0].slot, IconSlot::Settings);
-        assert_eq!(spans[1].slot, IconSlot::Widget("clock".into()));
-        // Every icon is reachable at its own centre, and the strip is long enough to
-        // hold them all.
-        for span in &spans {
-            assert_eq!(icon_at(&spans, span.start + span.length / 2.0), Some(&span.slot));
+    fn the_settings_row_leads_the_strip_and_every_enabled_widget_follows() {
+        for edge in [ScreenEdge::Trailing, ScreenEdge::Top] {
+            let s = settings(edge, 0.5);
+            let spans = row_spans(&s);
+            assert_eq!(spans.len(), s.enabled_slot_count() + 1);
+            assert_eq!(spans[0].row, StripRow::Settings);
+            assert_eq!(spans[1].row, StripRow::Widget("clock".into()));
+            // Every Row is reachable at its own centre.
+            for span in &spans {
+                assert_eq!(row_at(&spans, span.start + span.length / 2.0), Some(&span.row));
+            }
+            // The Strip is long enough to hold them all, flares included.
+            let horizontal = edge.grows_horizontally();
+            let last = spans.last().unwrap();
+            let drawn = StripLayout::resolve(&s).extent + 2.0 * strip_inverse_radius(horizontal);
+            assert!(drawn >= last.start + last.length + CHIP_END_PADDING, "{edge:?}");
+            // And the first Row starts clear of the flare rather than under it.
+            assert!(spans[0].start >= strip_inverse_radius(horizontal), "{edge:?}");
         }
-        // The strip is long enough to hold every icon, flares included.
-        let last = spans.last().unwrap();
-        let drawn = StripLayout::resolve(&s).extent + 2.0 * strip_inverse_radius();
-        assert!(drawn >= last.start + last.length + CHIP_END_PADDING);
-        // And the first icon starts clear of the flare rather than under it.
-        assert!(spans[0].start >= strip_inverse_radius());
     }
 
     #[test]
-    fn a_disabled_widget_leaves_no_icon_behind_it() {
-        let mut s = Settings { panel_style: PanelStyle::Compact, ..Default::default() };
+    fn a_disabled_widget_leaves_no_row_behind_it() {
+        let mut s = settings(ScreenEdge::Trailing, 0.5);
         s.slots[1].is_enabled = false;
-        let spans = icon_spans(&s);
-        assert!(!spans.iter().any(|span| span.slot == IconSlot::Widget("media".into())));
-        // And the strip shrinks with it, rather than leaving a gap where it was.
-        assert!(StripLayout::resolve(&s).extent < StripLayout::resolve(&Default::default()).extent);
+        let spans = row_spans(&s);
+        assert!(!spans.iter().any(|span| span.row == StripRow::Widget("media".into())));
+        // And the Strip shrinks with it, rather than leaving a gap where it was.
+        let full = settings(ScreenEdge::Trailing, 0.5);
+        assert!(StripLayout::resolve(&s).extent < StripLayout::resolve(&full).extent);
     }
 
     #[test]
-    fn the_gaps_between_icons_belong_to_no_icon() {
-        // Sliding down the strip must not flash a card for every widget on the way.
-        let s = Settings { panel_style: PanelStyle::Compact, ..Default::default() };
-        let spans = icon_spans(&s);
+    fn the_gaps_between_rows_belong_to_no_row() {
+        // Sliding down the Strip must not flash a popover for every widget on the way.
+        let s = settings(ScreenEdge::Trailing, 0.5);
+        let spans = row_spans(&s);
         let between = spans[0].start + spans[0].length + CHIP_SPACING / 2.0;
-        assert_eq!(icon_at(&spans, between), None);
+        assert_eq!(row_at(&spans, between), None);
     }
 }

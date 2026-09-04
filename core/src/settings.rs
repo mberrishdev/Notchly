@@ -26,19 +26,6 @@ impl ScreenEdge {
     }
 }
 
-/// What the panel shows once it is Open.
-///
-/// `Compact` is for someone who wants Notchly out of the way: the Widget Stack is
-/// replaced by the Icon Strip, and a widget's content is read one card at a time by
-/// resting on its icon. It is a different Open state, not a third state — the Panel is
-/// still either Idle or Open.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum PanelStyle {
-    Full,
-    Compact,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ActivationMode {
@@ -166,13 +153,11 @@ macro_rules! defaulted {
 
 defaulted!(d_edge, ScreenEdge, ScreenEdge::Trailing);
 defaulted!(d_alignment, f64, 0.42);
-defaulted!(d_panel_width, f64, 372.0);
-defaulted!(d_panel_height, f64, 540.0);
+defaulted!(d_popover_width, f64, 236.0);
+defaulted!(d_popover_height, f64, 320.0);
 defaulted!(d_handle_thickness, f64, 5.0);
 defaulted!(d_handle_length, f64, 108.0);
 defaulted!(d_handle_content_thickness, f64, 44.0);
-defaulted!(d_corner_radius, f64, 26.0);
-defaulted!(d_panel_style, PanelStyle, PanelStyle::Full);
 defaulted!(d_activation, ActivationMode, ActivationMode::Hover);
 defaulted!(d_open_delay, f64, 0.14);
 defaulted!(d_close_delay, f64, 0.42);
@@ -213,15 +198,15 @@ pub struct Settings {
     pub edge: ScreenEdge,
     /// Where the panel sits along its edge: 0 is top/left, 1 is bottom/right.
     pub alignment: f64,
-    pub panel_width: f64,
-    pub panel_height: f64,
+    /// The Popover's own size. There is no other surface left to size: the Strip is
+    /// measured from its rows, so these are the only dimensions a user can set.
+    pub popover_width: f64,
+    pub popover_height: f64,
     pub handle_thickness: f64,
     pub handle_length: f64,
     pub handle_chips: Vec<IdleChip>,
     pub handle_content_thickness: f64,
-    pub corner_radius: f64,
     pub edge_inset: f64,
-    pub panel_style: PanelStyle,
 
     pub activation: ActivationMode,
     pub open_delay: f64,
@@ -250,15 +235,13 @@ impl Default for Settings {
         Self {
             edge: d_edge(),
             alignment: d_alignment(),
-            panel_width: d_panel_width(),
-            panel_height: d_panel_height(),
+            popover_width: d_popover_width(),
+            popover_height: d_popover_height(),
             handle_thickness: d_handle_thickness(),
             handle_length: d_handle_length(),
             handle_chips: d_handle_chips(),
             handle_content_thickness: d_handle_content_thickness(),
-            corner_radius: d_corner_radius(),
             edge_inset: 0.0,
-            panel_style: d_panel_style(),
             activation: d_activation(),
             open_delay: d_open_delay(),
             close_delay: d_close_delay(),
@@ -344,10 +327,12 @@ mod tests {
     fn settings_file_from_an_older_version_still_loads() {
         // Every field has a default, so a file predating a field must not reset the
         // user's whole configuration.
-        let json = r#"{ "edge": "leading", "panelWidth": 300 }"#;
+        // "panelWidth" is a field this build no longer has: an unknown key must be
+        // ignored rather than failing the whole decode.
+        let json = r#"{ "edge": "leading", "popoverWidth": 300, "panelWidth": 372 }"#;
         let settings: Settings = serde_json::from_str(json).unwrap();
         assert_eq!(settings.edge, ScreenEdge::Leading);
-        assert_eq!(settings.panel_width, 300.0);
+        assert_eq!(settings.popover_width, 300.0);
         assert_eq!(settings.slots.len(), 5);
         assert_eq!(settings.activation, ActivationMode::Hover);
     }

@@ -91,6 +91,7 @@ function paint(metrics, settings, contentOpacity) {
 
   document.documentElement.style.setProperty("--accent", settings.accentHex);
   document.body.dataset.edge = settings.edge;
+  document.body.dataset.reduceMotion = String(Boolean(settings.reduceMotion));
 }
 
 function interpolate(from, to, t) {
