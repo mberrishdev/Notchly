@@ -5,7 +5,7 @@
 <h1 align="center">Notchly</h1>
 
 <p align="center"><strong>A notch-shaped panel for your desktop.</strong><br />
-Dock it to any edge. Fill it with widgets.</p>
+Dock it to any edge. Read it at a glance.</p>
 
 <p align="center">
   <a href="https://github.com/mberrishdev/Notchly/releases/latest"><img src="https://img.shields.io/github/v/release/mberrishdev/Notchly?label=release&color=2f6feb" alt="Latest release" /></a>
@@ -14,21 +14,22 @@ Dock it to any edge. Fill it with widgets.</p>
   <img src="https://img.shields.io/badge/status-available-24292f?label=Windows&message=build%20available" alt="Windows build available" />
 </p>
 
-Notchly puts a small Handle on the edge of your screen. It opens into a full Panel for
-widgets, shortcuts, system information, media controls, and clipboard history.
+Notchly puts a small Handle on the edge of your screen — or nothing but a bare line, if
+you would rather it disappeared. Hovering slides it open into the Strip: one row per
+widget, each showing its own live reading. Rest on a row and that widget opens beside
+it, in full.
 
-The Panel can dock to the top, bottom, left, or right edge. You can move it, resize it,
-choose what the closed Handle shows, and add your own widgets as plain HTML/CSS/JS
-folders.
+The Panel can dock to the top, bottom, left, or right edge. You can move it, choose what
+the closed Handle shows, and add your own widgets as plain HTML/CSS/JS folders.
 
 <table align="center">
   <tr>
     <td align="center" width="50%"><img src="docs/assets/handle-closed.png" alt="The closed Handle showing Idle Chips" /></td>
-    <td align="center" width="50%"><img src="docs/assets/panel-open.png" alt="The open Panel with the System, Quick Launcher, and Clipboard widgets" /></td>
+    <td align="center" width="50%"><img src="docs/assets/panel-open.png" alt="The open Strip with the System widget's popover beside it" /></td>
   </tr>
   <tr>
     <td align="center">The closed Handle, showing Idle Chips.</td>
-    <td align="center">The open Panel, hosting widgets.</td>
+    <td align="center">The open Strip, and one widget beside it.</td>
   </tr>
 </table>
 
@@ -93,16 +94,21 @@ Windows builds are produced in CI and have not yet been validated on Windows har
 - **Quick Launcher**: search for and launch installed applications.
 - **Clipboard**: searchable history of copied text.
 
+Each widget puts one reading on the Strip — the time, CPU load, whether something is
+playing, how deep the clipboard is — and opens in full when you rest on it.
+
 The closed Handle can show Idle Chips such as the clock, CPU, memory, battery, media
 activity, clipboard count, and the icons of enabled widgets. Chips reserve their space,
-so the Handle does not move when a value appears or disappears.
+so the Handle does not move when a value appears or disappears. Turn the Handle off
+entirely and only a thin line remains, until you reach for it.
 
 ## Customize It
 
 - Dock the Panel to any display edge.
-- Drag the Handle to reposition it or move it across the display to change edges.
+- Drag it to reposition, or across the display to change edges.
 - Open with hover, click, or a global hotkey.
-- Adjust open and close delays, size, corner radius, opacity, and accent color.
+- Hide the Handle entirely, leaving a bare line at the edge.
+- Adjust open and close delays, the popover's size, opacity, and accent color.
 - Choose an optional display and launch Notchly at login.
 - Set the Handle's Idle Chips and reorder them by dragging.
 
