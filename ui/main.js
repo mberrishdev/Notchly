@@ -1,7 +1,7 @@
 import { panel, listen, invoke } from "./lib/bridge.js";
 import { renderShape } from "./lib/panel-view.js";
 import { renderIdleHandle } from "./lib/idle-handle.js";
-import { renderStrip } from "./lib/strip.js";
+import { renderStrip, resetStrip } from "./lib/strip.js";
 import { chipContent, widgetContent, contentRefreshes } from "./lib/popover.js";
 import * as builtin from "./lib/builtin-widgets.js";
 import { startBridgeRelay, forgetFrames } from "./lib/widget-host.js";
@@ -40,6 +40,7 @@ function render() {
       renderStrip(strip, settings, metrics, ambient, current.popover?.value, widgetName);
     } else {
       strip.hidden = true;
+      resetStrip(strip);
       handle.hidden = !metrics.showsContent;
       if (metrics.showsContent) renderIdleHandle(handle, settings, ambient, metrics.handleRing);
     }
