@@ -17,6 +17,18 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
+      # One target at a time. Every job uploads `latest.json` to the same draft release,
+      # and tauri-action does that by deleting the existing asset and writing a merged
+      # one back. Run in parallel and two jobs interleave: the second holds an asset id
+      # the first has already deleted, and its upload fails with a bare
+      # "Not Found - update-a-release-asset".
+      #
+      # The build that loses the race still uploads its bundles, so the release *looks*
+      # complete while `latest.json` is missing that platform — v0.8.0 shipped with no
+      # `darwin-x86_64` entry, which silently offered Intel Macs no update at all.
+      # Three sequential builds cost about half an hour; releases are rare and a
+      # half-written updater manifest is not worth the twenty minutes.
+      max-parallel: 1
       matrix:
         include:
           # macOS ships two builds: Apple Silicon and Intel. A universal binary would

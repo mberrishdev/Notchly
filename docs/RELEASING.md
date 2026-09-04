@@ -9,6 +9,20 @@ That runs `.github/workflows/release.yml`, which builds on macOS (Apple Silicon 
 Intel) and Windows and opens a **draft** GitHub Release with the artefacts attached.
 Review it, then publish. `workflow_dispatch` does the same thing without a tag.
 
+**Check `latest.json` before publishing.** A complete-looking asset list is not proof
+the updater manifest is complete — the builds share one `latest.json`, and a build can
+upload its bundles and still fail to write its entry:
+
+```bash
+gh release download vX.Y.Z --pattern latest.json --dir /tmp/rel
+python3 -c "import json;print(*json.load(open('/tmp/rel/latest.json'))['platforms'],sep='\n')"
+```
+
+Expect `darwin-aarch64`, `darwin-x86_64` and `windows-x86_64`, each with an `-app`,
+`-msi` or `-nsis` twin. A missing platform means those users are offered no update at
+all, silently. v0.8.0 shipped that way and had to be patched by hand; the matrix now
+runs one target at a time so the writes cannot interleave.
+
 Every ordinary CI run also uploads its bundles for 14 days, so a Windows installer is
 downloadable from any commit without cutting a release.
 
