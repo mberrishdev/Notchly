@@ -181,6 +181,13 @@ fn builtin_widgets() -> Vec<builtins::Descriptor> {
     builtins::all()
 }
 
+/// The Strip as it would be drawn for `settings`, so the Settings window can model it
+/// without a second implementation of the arithmetic.
+#[tauri::command]
+fn panel_preview(settings: Settings) -> geometry::StripPreview {
+    geometry::StripPreview::resolve(&settings)
+}
+
 #[tauri::command]
 fn list_displays(app: AppHandle) -> Vec<String> {
     app.get_webview_window(panel::PANEL_LABEL)
@@ -220,6 +227,13 @@ fn build_settings_window(app: &AppHandle) -> Result<(), String> {
 
 /// `async` so Tauri runs it on the async runtime rather than the main thread — see
 /// `build_settings_window`.
+/// Clicking an icon on the compact strip, rather than resting on it. Same popover, no
+/// wait — the click already said which widget was meant.
+#[tauri::command]
+fn show_widget_popover(app: AppHandle, widget_id: Option<String>) {
+    panel::set_popover(&app, widget_id.map(panel::Popover::Widget));
+}
+
 #[tauri::command]
 async fn open_settings(app: AppHandle) -> Result<(), String> {
     build_settings_window(&app)
@@ -379,7 +393,9 @@ pub fn run() {
             launch_app,
             builtin_widgets,
             list_displays,
+            panel_preview,
             open_settings,
+            show_widget_popover,
             create_starter_widget,
             reinstall_examples,
             reload_all_widgets,

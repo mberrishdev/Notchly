@@ -62,9 +62,15 @@ function card(body) {
   return node;
 }
 
-/** A widget's own quiet label, for the ones a glance cannot place. */
-function selfLabel(text, accessory) {
-  const row = el("div", "row baseline");
+/**
+ * A widget's own quiet label, for the ones a glance cannot place.
+ *
+ * `naming` marks the label as the widget's *name* rather than a heading within it. A
+ * popover card puts the name in its own header, so a naming row there would say it
+ * twice; a heading like UPTIME still belongs to the body and stays.
+ */
+function selfLabel(text, accessory, naming) {
+  const row = el("div", `row baseline${naming ? " self-naming" : ""}`);
   row.append(el("span", "section-label", text), el("span", "card-spacer"));
   if (accessory) row.append(accessory);
   return row;
@@ -249,7 +255,7 @@ export function mediaWidget(media) {
 export function clipboardWidget(entries, prefs) {
   const body = el("div", "card-body");
   const limit = prefs.visibleCount ?? 6;
-  body.append(selfLabel("CLIPBOARD", el("span", "accessory", String(entries?.length ?? 0))));
+  body.append(selfLabel("CLIPBOARD", el("span", "accessory", String(entries?.length ?? 0)), true));
   if (!entries?.length) {
     body.append(el("div", "empty", "Nothing copied yet<br><span class='muted'>Copy something and it lands here.</span>"));
     return card(body);

@@ -6,8 +6,10 @@
 //! made the DOM an unreliable place to decide this. Rust owns the window frame, so it
 //! can answer "is the pointer over the panel" directly.
 
-use crate::geometry::{chip_at, chip_spans, HOVER_BUFFER, POPOVER_GAP, POPOVER_WIDTH};
-use crate::panel;
+use crate::geometry::{
+    chip_at, chip_spans, popover_offset, row_at, row_spans, StripRow, HOVER_BUFFER,
+};
+use crate::panel::{self, Popover};
 use crate::settings::{ActivationMode, ScreenEdge};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -19,26 +21,31 @@ const POLL: std::time::Duration = std::time::Duration::from_millis(90);
 /// would make resting on a reading feel like nothing had happened.
 const POPOVER_DELAY: f64 = 0.12;
 
-/// Where the pointer is, relative to the closed panel.
+/// Where the pointer is, relative to whatever narrow shape is against the edge — the
+/// idle handle, or the compact Icon Strip, which occupy the window the same way.
+///
+/// Deliberately geometric: it reports *where* along the shape the pointer is and leaves
+/// *what is there* to the caller, because the answer differs by state — chips while
+/// closed, widget icons on an open strip.
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Zone {
-    /// On the handle itself, over the chip named — or over none, in a gap.
-    Handle(Option<crate::settings::IdleChip>),
-    /// On the popover itself. Reading a card must not be mistaken for the push that
+    /// On the shape itself, this far along it from its leading end.
+    OnShape(f64),
+    /// On the popover beside it. Reading one must not be mistaken for the push that
     /// opens the panel, so this holds what is showing and does nothing else.
     Popover,
-    /// Inside the window but past the handle, further from the screen edge. Pushing
+    /// Inside the window but past the shape, further from the screen edge. Pushing
     /// here is the deliberate gesture that opens the panel.
     Inward,
     Away,
 }
 
-/// Where the pointer sits relative to the handle drawn inside the panel window.
+/// Where the pointer sits relative to the shape drawn inside the panel window.
 ///
 /// The window rect alone stopped being enough once a popover could enlarge it: the
 /// window is the open size while the pointer is merely resting on the strip, so
 /// "inside the window" would mean "open the panel" the instant a popover appeared.
-/// The handle's own rectangle comes from the metrics the frontend was handed, which is
+/// The shape's own rectangle comes from the metrics the frontend was handed, which is
 /// the same shape it drew.
 #[allow(clippy::too_many_arguments)]
 fn zone_of(
@@ -48,8 +55,7 @@ fn zone_of(
     origin_y: f64,
     scale: f64,
     metrics: &crate::geometry::PanelMetrics,
-    settings: &crate::settings::Settings,
-    widget_count: usize,
+    edge: ScreenEdge,
     showing_popover: bool,
 ) -> Zone {
     // The handle's rectangle in screen coordinates.
@@ -65,19 +71,18 @@ fn zone_of(
         && pointer_y < bottom + slack;
 
     if on_strip {
-        // Chips run along the handle: down it on the side edges, across it on the
+        // Contents run along the shape: down it on the side edges, across it on the
         // top and bottom. The offset is measured from the same end Rust laid them from.
-        let along = if settings.edge.grows_horizontally() {
+        let along = if edge.grows_horizontally() {
             (pointer_y - top) / scale
         } else {
             (pointer_x - left) / scale
         };
-        let spans = chip_spans(settings, widget_count);
-        return Zone::Handle(chip_at(&spans, along));
+        return Zone::OnShape(along);
     }
 
-    // How far past the strip the pointer has travelled, inward from the docked edge.
-    let past = match settings.edge {
+    // How far past the shape the pointer has travelled, inward from the docked edge.
+    let past = match edge {
         ScreenEdge::Trailing => (left - slack) - pointer_x,
         ScreenEdge::Leading => pointer_x - (right + slack),
         ScreenEdge::Top => pointer_y - (bottom + slack),
@@ -87,9 +92,10 @@ fn zone_of(
     if past < 0.0 {
         return Zone::Away;
     }
-    // The card occupies the room immediately past the strip. Only beyond it is the
+    // The popover occupies the room immediately past the strip. Only beyond it is the
     // movement unambiguously "open the panel" rather than "let me read that".
-    if showing_popover && past <= POPOVER_GAP + POPOVER_WIDTH {
+    // `past` is measured from the far side of the buffer, and so is the popover.
+    if showing_popover && past <= popover_offset() - HOVER_BUFFER + metrics.popover_width {
         Zone::Popover
     } else {
         Zone::Inward
@@ -127,7 +133,7 @@ impl Watchdog {
                 let Some((expanded, popover, settings, snapshot)) = panel::with_state(&app, |state| {
                     (
                         state.expanded,
-                        state.popover,
+                        state.popover.clone(),
                         state.settings.clone(),
                         state.last_snapshot.clone(),
                     )
@@ -136,25 +142,6 @@ impl Watchdog {
                 };
                 let hover_mode = settings.activation == ActivationMode::Hover;
 
-                if expanded {
-                    // Open: the whole window is the target, exactly as before.
-                    inside_since = None;
-                    resting_since = None;
-                    if inside {
-                        outside_since = None;
-                        continue;
-                    }
-                    let since = *outside_since.get_or_insert_with(std::time::Instant::now);
-                    if !panel::holds_panel_open(&app)
-                        && since.elapsed().as_secs_f64() >= settings.close_delay
-                    {
-                        let handle = app.clone();
-                        let _ = app.run_on_main_thread(move || panel::close(&handle));
-                    }
-                    continue;
-                }
-
-                outside_since = None;
                 let zone = snapshot
                     .as_ref()
                     .filter(|_| inside)
@@ -166,32 +153,98 @@ impl Watchdog {
                             origin.y as f64,
                             scale,
                             &snap.metrics,
-                            &settings,
-                            settings.enabled_slot_count(),
+                            settings.edge,
                             popover.is_some(),
                         )
                     })
                     .unwrap_or(Zone::Away);
 
+                // Setting a popover is the same request wherever it comes from, so both
+                // branches below go through this rather than repeating the plumbing.
+                let show = |target: Option<Popover>| {
+                    if popover == target || panel::hover_suppressed(&app) {
+                        return;
+                    }
+                    let handle = app.clone();
+                    let _ = app.run_on_main_thread(move || {
+                        panel::set_popover(&handle, target);
+                    });
+                };
+
+                if expanded {
+                    inside_since = None;
+                    if inside {
+                        outside_since = None;
+                        // Resting on a Row opens its Popover.
+                        //
+                        // Deliberately not gated on the activation mode: that setting
+                        // decides whether the Panel may open by accident, and the Strip
+                        // is only ever on screen because it was opened on purpose.
+                        match zone {
+                            Zone::OnShape(along) => {
+                                let spans = row_spans(&settings);
+                                match row_at(&spans, along) {
+                                    Some(StripRow::Widget(id)) => {
+                                        let id = id.clone();
+                                        let since = *resting_since
+                                            .get_or_insert_with(std::time::Instant::now);
+                                        if since.elapsed().as_secs_f64() >= POPOVER_DELAY {
+                                            show(Some(Popover::Widget(id)));
+                                        }
+                                    }
+                                    // The settings Row and the gaps between Rows show
+                                    // nothing, so sliding along the Strip past them puts
+                                    // the last Popover away rather than stranding it.
+                                    _ => {
+                                        resting_since = None;
+                                        show(None);
+                                    }
+                                }
+                            }
+                            // Reading the popover holds it; anywhere else in the
+                            // window is the pointer on its way out.
+                            Zone::Popover => resting_since = None,
+                            _ => {
+                                resting_since = None;
+                                show(None);
+                            }
+                        }
+                        continue;
+                    }
+                    resting_since = None;
+                    let since = *outside_since.get_or_insert_with(std::time::Instant::now);
+                    if !panel::holds_panel_open(&app)
+                        && since.elapsed().as_secs_f64() >= settings.close_delay
+                    {
+                        let handle = app.clone();
+                        let _ = app.run_on_main_thread(move || panel::close(&handle));
+                    }
+                    continue;
+                }
+
+                outside_since = None;
+                let chip = match zone {
+                    Zone::OnShape(along) => {
+                        chip_at(&chip_spans(&settings, settings.enabled_slot_count()), along)
+                    }
+                    _ => None,
+                };
+
                 match zone {
                     // A reading with detail behind it: rest to see it, push past to open.
-                    Zone::Handle(Some(chip)) if hover_mode && chip.draws_arc() => {
+                    Zone::OnShape(_)
+                        if hover_mode && chip.map(|chip| chip.draws_arc()).unwrap_or(false) =>
+                    {
                         inside_since = None;
                         let since = *resting_since.get_or_insert_with(std::time::Instant::now);
-                        if since.elapsed().as_secs_f64() >= POPOVER_DELAY
-                            && popover != Some(chip)
-                            && !panel::hover_suppressed(&app)
-                        {
-                            let handle = app.clone();
-                            let _ = app.run_on_main_thread(move || {
-                                panel::set_popover(&handle, Some(chip));
-                            });
+                        if since.elapsed().as_secs_f64() >= POPOVER_DELAY {
+                            show(chip.map(Popover::Chip));
                         }
                     }
                     // Anything else on the handle keeps the behaviour it always had:
                     // rest on it and the panel opens. Only readings that have something
                     // more to say ask for the extra push.
-                    Zone::Handle(_) => {
+                    Zone::OnShape(_) => {
                         resting_since = None;
                         let since = *inside_since.get_or_insert_with(std::time::Instant::now);
                         if hover_mode
@@ -218,12 +271,7 @@ impl Watchdog {
                     Zone::Away => {
                         resting_since = None;
                         inside_since = None;
-                        if popover.is_some() {
-                            let handle = app.clone();
-                            let _ = app.run_on_main_thread(move || {
-                                panel::set_popover(&handle, None);
-                            });
-                        }
+                        show(None);
                     }
                 }
             }
@@ -241,7 +289,10 @@ impl Drop for Watchdog {
 #[cfg(test)]
 mod tests {
     use super::{zone_of, Zone};
-    use crate::geometry::{PanelMetrics, POPOVER_GAP, POPOVER_WIDTH};
+    use crate::geometry::{
+        chip_at, chip_spans, popover_offset, row_at, row_extent, row_spans, strip_depth,
+        PanelMetrics, StripRow, POPOVER_GAP,
+    };
     use crate::settings::{IdleChip, ScreenEdge, Settings};
 
     /// A handle 40 wide and 200 tall, sitting at the right of a 400-wide window whose
@@ -259,7 +310,11 @@ mod tests {
             window_width: 400.0,
             window_height: 400.0,
             handle_ring: 30.0,
-            popover_width: POPOVER_WIDTH,
+            popover_width: 236.0,
+            popover_offset: popover_offset(),
+            popover_height: 320.0,
+            strip_row_extent: row_extent(true),
+            strip_depth: strip_depth(true),
         }
     }
 
@@ -272,15 +327,36 @@ mod tests {
     }
 
     fn zone(x: f64, y: f64, showing: bool) -> Zone {
-        zone_of(x, y, 0.0, 0.0, 1.0, &metrics(), &settings(), 0, showing)
+        zone_of(x, y, 0.0, 0.0, 1.0, &metrics(), settings().edge, showing)
+    }
+
+    /// What the watchdog does with `OnShape` while the panel is closed.
+    fn chip_under(x: f64, y: f64) -> Option<IdleChip> {
+        match zone(x, y, false) {
+            Zone::OnShape(along) => chip_at(&chip_spans(&settings(), 0), along),
+            other => panic!("expected to be on the handle, got {other:?}"),
+        }
     }
 
     #[test]
     fn the_strip_itself_reports_the_chip_under_the_pointer() {
         // Just inside the handle, a little way down from its top edge.
-        match zone(380.0, 118.0, false) {
-            Zone::Handle(Some(IdleChip::Cpu)) => {}
-            other => panic!("expected the first chip, got {other:?}"),
+        assert_eq!(chip_under(380.0, 118.0), Some(IdleChip::Cpu));
+    }
+
+    /// And what it does with the same offset while the Strip is open.
+    #[test]
+    fn an_open_strip_reports_the_row_under_the_pointer() {
+        let settings = settings();
+        let spans = row_spans(&settings);
+        // The Strip starts at the shape's top edge; the first Row is the settings
+        // action, so the second is the first enabled widget.
+        let second = spans[1].start + row_extent(true) / 2.0;
+        match zone_of(380.0, 100.0 + second, 0.0, 0.0, 1.0, &metrics(), settings.edge, false) {
+            Zone::OnShape(along) => {
+                assert_eq!(row_at(&spans, along), Some(&StripRow::Widget("clock".into())))
+            }
+            other => panic!("expected to be on the strip, got {other:?}"),
         }
     }
 
@@ -292,6 +368,14 @@ mod tests {
     }
 
     #[test]
+    fn the_near_edge_of_a_popover_is_not_the_handle() {
+        // Reaching for a popover must not read as still being on the handle, which
+        // would put it away in the same motion that reached for it.
+        let near_edge = 360.0 - popover_offset() + 0.5;
+        assert_eq!(zone(near_edge, 200.0, true), Zone::Popover);
+    }
+
+    #[test]
     fn the_same_spot_opens_the_panel_when_no_card_is_showing() {
         let onto_the_card = 360.0 - super::HOVER_BUFFER - POPOVER_GAP - 20.0;
         assert_eq!(zone(onto_the_card, 200.0, false), Zone::Inward);
@@ -299,7 +383,7 @@ mod tests {
 
     #[test]
     fn pushing_past_the_card_opens_the_panel() {
-        let beyond = 360.0 - super::HOVER_BUFFER - POPOVER_GAP - POPOVER_WIDTH - 10.0;
+        let beyond = 360.0 - super::HOVER_BUFFER - POPOVER_GAP - metrics().popover_width - 10.0;
         assert_eq!(zone(beyond, 200.0, true), Zone::Inward);
     }
 
@@ -316,7 +400,7 @@ mod tests {
         let mut m = metrics();
         m.offset_x = 0.0;
         // Leading dock: inward means a larger x, the opposite of trailing.
-        let pushed = zone_of(40.0 + super::HOVER_BUFFER + 5.0, 200.0, 0.0, 0.0, 1.0, &m, &s, 0, false);
+        let pushed = zone_of(40.0 + super::HOVER_BUFFER + 5.0, 200.0, 0.0, 0.0, 1.0, &m, s.edge, false);
         assert_eq!(pushed, Zone::Inward);
     }
 }

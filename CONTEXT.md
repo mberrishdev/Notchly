@@ -12,17 +12,77 @@ It has exactly two visual states:
 
 - **Idle** — the **Handle** hugging the screen edge. Either a bare line, or a strip
   showing **Idle Chips** (see below).
-- **Open** — the full surface, showing the **Widget Stack**.
+- **Open** — the **Strip**, the Handle slid out into a readable surface.
 
 There is no third state. Anything that looks like a third state (a hover highlight, a
-drag lift) is a decoration on one of these two.
+drag lift, a **Popover**) is a decoration on one of these two.
 
 The Panel's outline is the **Notch Shape**: rounded on the two corners away from the
 screen edge, and *concave* on the two corners that meet it, flaring outward so the
 surface reads as continuous with the bezel. The concave corners are the whole point of
 the app's identity — never replace the shape with a plain rounded rectangle.
 
-- Avoid: "popover", "HUD", "drawer", "sidebar", "window" (for the Panel itself).
+- Avoid: "popover", "HUD", "drawer", "sidebar", "window" (for the Panel itself). The
+  Popover below is a real thing with that name; the Panel is never called one.
+
+**`shows_handle_when_idle` is what makes Notchly disappear.** Turned off, the Handle is
+the bare line whatever Idle Chips are selected — the selection is kept, not cleared, so
+turning it back on restores the strip that was there. The Panel window is snug around
+the line, so what is left on screen is a few points of bezel that swallows nothing.
+
+## The Strip
+
+What the Panel opens into, and the only Open state there is. One **Row** per enabled
+Slot, led by a settings action; resting on a Row opens that widget's **Popover**.
+
+There was a **Widget Stack** here once — every widget's card, one under another, in a
+Panel with a footprint. It is gone. Notchly is a strip of readings against the bezel and
+one card at a time beside it; a second, larger surface with its own chrome was a
+different app wearing the same shape.
+
+1. **A Row shows a reading, not just a glyph.** The Clock's time, the System's CPU, the
+   Clipboard's depth, whether something is playing. The Strip is meant to be read in
+   passing, and an icon on its own says only that a widget exists.
+2. **A Row reserves its room whether or not its reading has a value**, for the reason an
+   Idle Chip does: a Strip that resized itself when a song started would move the drag
+   target out from under the pointer. Sizes come from `StripLayout`, never from
+   measuring after layout.
+3. **Rows render for their orientation, they are never rotated.** On the left and right
+   Edges they stack in a column, each Row laying its reading beside its glyph, and the
+   Strip is deep enough for the longest one. On the top and bottom they run along the
+   edge instead.
+4. **The Strip is measured from its Rows, never set by the user.** The only thing left
+   to size is the Popover. A Strip with a width slider would only spread its Rows out.
+5. **The settings action leads the Strip**, so its position never moves as widgets are
+   added and removed.
+6. **The Strip slides out of the bezel.** Opening is a movement from the edge, not a
+   surface appearing in place — the shape underneath is doing exactly that, and Rows
+   that faded in on the spot fought it.
+7. **A widget is one thing in both places.** A Row's reading and its Popover are two
+   views of the same widget, and a Built-in's Popover calls the same function anything
+   else would. A Custom Widget's is the same sandboxed iframe under the same origin.
+
+## The Popover
+
+The card drawn beside the Panel while the pointer rests on something: an Idle Chip that
+draws an arc, or a Row on the Strip. One gesture, one state — only one Popover shows at
+a time, and Rust owns which, because the Panel never activates and so cannot be asked
+from the DOM.
+
+It is the only surface in Notchly with room for a widget's whole view, which is why it
+is the only one the user can size.
+
+1. **A Popover is drawn clear of the hover buffer, not merely clear of the shape.** The
+   buffer counts as part of the Handle, so a Popover inside it had a near edge that read
+   as "still on the Handle" — which put it away in the same motion that reached for it.
+   `popover_offset` is that distance, and the frontend is handed it rather than choosing
+   one.
+2. **Reaching onto a Popover is not the push that opens the Panel.** The room it
+   occupies is its own zone; only past it is the movement unambiguous.
+3. **The window reserves the Popover's room while Open**, whether or not one is
+   showing, so a Popover never falls outside the window and gets clipped. The Idle
+   window does not: it stays snug around the Handle, and a Chip's Popover borrows the
+   open frame by putting the window at its open size.
 
 ## Idle Chips
 
@@ -78,8 +138,8 @@ These are load-bearing, not preferences:
 
 ## Widgets
 
-A **Widget** is one card in the Widget Stack. Two kinds, and the distinction is only
-about where the code lives:
+A **Widget** is one entry in the user's Panel: a Row on the Strip, and the Popover that
+Row opens. Two kinds, and the distinction is only about where the code lives:
 
 - **Built-in Widget** — compiled in. Clock, Now Playing, System, Quick Launcher,
   Clipboard.
@@ -125,8 +185,12 @@ path to the settings UI.
 Everything that samples — system metrics, now playing — is **refcounted**, at one of two
 **Cadences**:
 
-- **Live** — the Panel is Open and the numbers are on screen. Fast.
-- **Ambient** — the Panel is closed but an Idle Chip needs the value. Slow.
+- **Live** — a widget's whole view is on screen. Fast.
+- **Ambient** — a Row or an Idle Chip needs one headline value. Slow.
+
+An open Strip wants Ambient: a Row is one number, and only for the widgets actually on
+it. **Live is for the Popover alone** — the System card is the only thing that asks for
+the process list, and nothing should pay for it while a Row is showing one percentage.
 
 The fastest requested Cadence wins; no subscribers stops sampling entirely, which is the
 default state, because the default Handle shows only the clock and the clock samples

@@ -10,16 +10,23 @@ of truth for the domain model and terminology.
 
 ## State of the repo
 
-Working end to end on macOS, with Windows builds produced by CI: the panel opens on hover, docks to all four edges, drags
-to reposition, shows a configurable ambient strip while closed, hosts five built-in
-widgets plus any number of custom ones with hot reload, and has a five-pane settings
-window. Windows runtime behavior still needs validation on Windows hardware.
+Working end to end on macOS, with Windows builds produced by CI: the panel docks to all
+four edges, drags to reposition, and shows a configurable ambient strip while closed —
+or a bare line, so nothing is on screen until you reach for it. Hovering slides it open
+into the strip: one row per widget, each carrying its own live reading, and resting on a
+row opens that widget's popover beside it. Five built-in widgets plus any number of
+custom ones with hot reload, and a five-pane settings window. Windows runtime behavior
+still needs validation on Windows hardware.
 
-98 Rust tests cover the notch geometry, window frames, drag placement, idle handle
-sizing, settings decoding, permission gating, the widget manifest format, the widget
-protocol's path handling and content policy, the bridge's HTTP surface, and launcher
-search ranking. They are the parts where a silent mistake would be invisible on screen;
-the views are not tested.
+There is no large panel. An earlier build opened into a widget stack with its own
+chrome; it was deleted, and the strip plus one popover is the whole surface. Do not
+reintroduce a second, larger panel — see `CONTEXT.md`.
+
+111 Rust tests cover the notch geometry, window frames, drag placement, idle handle and
+strip sizing, hover zones, settings decoding, permission gating, the widget manifest
+format, the widget protocol's path handling and content policy, the bridge's HTTP
+surface, and launcher search ranking. They are the parts where a silent mistake would be
+invisible on screen; the views are not tested.
 
 ## Stack decisions (already made, do not relitigate)
 
@@ -48,12 +55,14 @@ The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is f
 
 - `ui/` — the frontend, running inside the webview. `main.js` is the state machine;
   `lib/notch-shape.js` builds the outline; `lib/panel-view.js` paints and animates it;
-  `lib/widget-host.js` hosts custom widgets and relays their bridge calls;
-  `lib/widget-runtime.js` is injected into them; `settings.js` and
-  `lib/settings-*.js` are the settings window
+  `lib/idle-handle.js` and `lib/strip.js` draw the closed and open states, both strips
+  against the bezel; `lib/popover.js` draws the card beside them; `lib/widget-host.js`
+  hosts custom widgets and relays their bridge calls; `lib/widget-runtime.js` is
+  injected into them; `settings.js` and `lib/settings-*.js` are the settings window
 - `core/src/` — the Rust binary
   - `panel.rs` — the window and the open/close state machine
-  - `geometry.rs` — settings + display → window frames, and `IdleHandleLayout`
+  - `geometry.rs` — settings + display → window frames, `HandleLayout`, `StripLayout`,
+    and the chip and row spans the hover watchdog tests the pointer against
   - `hover.rs` — the cursor watchdog behind hover-to-open
   - `settings.rs` — the persisted model, with serde defaults for tolerant decoding
   - `widgets.rs`, `widget_protocol.rs`, `bridge.rs` — discovery, the `widget://`
@@ -79,12 +88,19 @@ The Tauri CLI locates `tauri.conf.json` by searching, so the directory name is f
 ## Testing
 
 ```bash
-cd core && cargo test          # 98 tests, headless
+cd core && cargo test          # 111 tests, headless
 npx tauri build --bundles app       # release bundle
 ```
 
 Pure logic the UI depends on is pulled into a testable type rather than tested through
-a view — `Placement`, `HandleLayout` and `apps::rank` all exist in that shape.
+a view — `Placement`, `HandleLayout`, `StripLayout` and `apps::rank` all exist in that
+shape.
+
+The frontend has no test suite, but `ui/` is plain ES modules and a page, so it can be
+rendered in headless Chromium with `window.__TAURI__` stubbed and a `panel-state`
+snapshot pushed in. That is the only way to see the panel at all from a terminal: a
+non-activating accessory window is not composited, so `screencapture` returns the
+desktop even while `CGWindowListCopyWindowInfo` reports the window at the right frame.
 
 Setting `NOTCHLY_CAPTURE_DIR` makes the app walk itself through its states and save a
 PNG of each. It sits behind the `capture` Cargo feature — `cargo run --features
@@ -104,4 +120,6 @@ not "not rendered."**
 6. ~~Windows: `WS_EX_NOACTIVATE`, and Now Playing via
    `GlobalSystemMediaTransportControlsSessionManager`~~ written, unvalidated on
    Windows hardware
-7. Launcher app icons; per-widget file isolation — not started
+7. ~~Strip of live readings replacing the widget stack, per-widget popovers, a handle
+   that hides to a bare line~~ done
+8. Launcher app icons; per-widget file isolation — not started

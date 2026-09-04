@@ -7,7 +7,7 @@
 //! animates the shape inside it.
 
 use crate::geometry::{PanelGeometry, Placement, Rect};
-use crate::settings::Settings;
+use crate::settings::{IdleChip, Settings};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -16,6 +16,27 @@ use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize
 pub const PANEL_LABEL: &str = "panel";
 /// How long the closing animation runs before the window is allowed to shrink.
 const COLLAPSE_ANIMATION_MS: u64 = 340;
+
+/// What the popover is currently showing.
+///
+/// A reading on the idle handle, or a widget on the Icon Strip. Both are the same
+/// gesture — rest on a thing to see the detail behind it — so they are one state, and
+/// only one can be showing at a time.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind", content = "value")]
+pub enum Popover {
+    Chip(IdleChip),
+    Widget(String),
+}
+
+impl Popover {
+    pub fn widget_id(&self) -> Option<&str> {
+        match self {
+            Popover::Widget(id) => Some(id),
+            Popover::Chip(_) => None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,14 +47,16 @@ pub struct PanelSnapshot {
     /// The reading the pointer is resting on, while the panel is still closed. The
     /// window is already at its open size when this is set — the shape stays the
     /// handle, and the room that buys is where the popover is drawn.
-    pub popover: Option<crate::settings::IdleChip>,
+    pub popover: Option<Popover>,
 }
 
 pub struct PanelState {
     pub settings: Settings,
     pub expanded: bool,
-    /// Which reading the pointer is resting on, if any. Never set while expanded.
-    pub popover: Option<crate::settings::IdleChip>,
+    /// What the pointer is resting on, if anything — an Idle Chip while closed, a Strip
+    /// Row while open. The window reserves room beside the shape in both states, so
+    /// there is nowhere it can be hidden.
+    pub popover: Option<Popover>,
     /// Bumped on every state change so a stale collapse timer can tell it was replaced.
     generation: Arc<AtomicU64>,
     pub dragging: bool,
@@ -204,7 +227,7 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
         return;
     };
 
-    let popover = with_state(app, |state| state.popover).flatten();
+    let popover = with_state(app, |state| state.popover.clone()).flatten();
     // A popover needs the room the open panel gets, but nothing about the shape changes:
     // it is still the handle, merely drawn inside a larger window. `metrics_in` already
     // separates those two questions for the close animation.
@@ -217,22 +240,23 @@ pub fn refresh(app: &AppHandle, expanded: bool) {
         expanded,
         metrics: geometry.metrics_in(expanded, window_open),
         settings: settings.clone(),
-        popover,
+        popover: popover.clone(),
     };
     let handle = app.clone();
     with_state(app, |state| {
         state.last_snapshot = Some(snapshot.clone());
-        state.ambient.sync(&handle, expanded, &settings);
+        state.ambient.sync(&handle, expanded, &settings, popover.as_ref());
     });
     let _ = app.emit("panel-state", snapshot);
 }
 
 /// Shows, moves or clears the popover. Returns true when something actually changed,
 /// so the caller can avoid refreshing the window on every poll.
-pub fn set_popover(app: &AppHandle, chip: Option<crate::settings::IdleChip>) -> bool {
+pub fn set_popover(app: &AppHandle, target: Option<Popover>) -> bool {
     let changed = with_state(app, |state| {
-        // A popover under an open panel would be drawn behind it.
-        let wanted = if state.expanded { None } else { chip };
+        // Open or closed, the shape is a strip against the bezel with room beside it, so
+        // a Popover is never hidden by the Panel and needs no guard here.
+        let wanted = target;
         if state.popover == wanted {
             return false;
         }
@@ -260,8 +284,9 @@ pub fn open(app: &AppHandle) {
     }
     // Grow the (transparent) window first so the animation has room to play out.
     refresh(app, true);
-    // Don't leave the System widget blank until the first scheduled tick.
-    crate::services::ambient::Ambient::sample_now(app, true);
+    // The Strip's rows carry live readings, so don't leave them blank until the first
+    // scheduled tick. Processes are only wanted by the System popover, not by the row.
+    crate::services::ambient::Ambient::sample_now(app, false);
     if let Some(window) = app.get_webview_window(PANEL_LABEL) {
         let _ = window.show();
     }
@@ -275,6 +300,9 @@ pub fn close(app: &AppHandle) {
             return;
         }
         guard.expanded = false;
+        // The Strip can be holding a Popover open as it closes, and the collapsed handle
+        // has nothing to anchor one to.
+        guard.popover = None;
         guard.generation.fetch_add(1, Ordering::SeqCst) + 1
     };
 

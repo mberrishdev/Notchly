@@ -6,6 +6,7 @@
 //! nothing.
 
 use super::metrics::{Cadence, MetricsSample, SamplerHandle};
+use crate::panel::Popover;
 use crate::settings::Settings;
 use tauri::{AppHandle, Emitter};
 
@@ -51,20 +52,40 @@ impl Drop for MediaPoller {
 
 impl Ambient {
     /// Starts, stops, or re-paces sampling to match what is currently on screen.
-    pub fn sync(&mut self, app: &AppHandle, expanded: bool, settings: &Settings) {
-        let wanted = if expanded {
-            // The open panel shows the System widget, which wants the process list.
+    ///
+    /// The compact strip is why `popover` is here: opening it puts nothing but glyphs on
+    /// screen, so it must not request Live sampling the way the Widget Stack does. Only
+    /// the card the pointer actually opened counts as a reading being displayed.
+    pub fn sync(
+        &mut self,
+        app: &AppHandle,
+        expanded: bool,
+        settings: &Settings,
+        popover: Option<&Popover>,
+    ) {
+        let showing = |widget_id: &str| popover.and_then(Popover::widget_id) == Some(widget_id);
+        let row_for = |widget_id: &str| {
+            expanded
+                && settings
+                    .slots
+                    .iter()
+                    .any(|slot| slot.is_enabled && slot.widget_id == widget_id)
+        };
+
+        let wanted = if showing("system") {
+            // Only the Popover shows the process list; the Row is one percentage.
             Some((Cadence::Live, true))
-        } else if settings.handle_chips.iter().any(|chip| chip.needs_metrics()) {
+        } else if row_for("system") || settings.handle_chips.iter().any(|chip| chip.needs_metrics())
+        {
             Some((Cadence::Ambient, false))
         } else {
             None
         };
 
-        // Now Playing is wanted by the open panel and by the idle indicator chip.
-        let media_wanted = if expanded {
+        // Now Playing is wanted by its Popover, its Row, and the idle indicator chip.
+        let media_wanted = if showing("media") {
             Some(Cadence::Live)
-        } else if settings.handle_chips.iter().any(|chip| chip.needs_media()) {
+        } else if row_for("media") || settings.handle_chips.iter().any(|chip| chip.needs_media()) {
             Some(Cadence::Ambient)
         } else {
             None
